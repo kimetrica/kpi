@@ -1,0 +1,48 @@
+.tag-list {
+  width: 900px;
+  margin: 35px auto 12px;
+  background-color: #fff;
+}
+.tag-list__header {
+  padding: 12px;
+}
+.tag-list__headeritem {
+  width: 25%;
+  float: left;
+}
+.tag-list__row {
+  @extend .clearfix;
+  padding: 12px;
+  position: relative;
+}
+.tag-list__tagname {
+  display: inline-block;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid rgba(120,120,120,0.1);
+  border-radius: 2px;
+  > i:first-child {
+    @extend .fa, .fa-fw, .fa-tag;
+    color: rgba(0,0,0,0.2);
+  }
+}
+.tag-list__taginfo {
+  position: absolute;
+  left: 60%;
+  color: #666;
+  top: 16px;
+}
+.tag-list__button {
+  position: absolute;
+  top: 12px;
+  @extend .mdl-button;
+  &.tag-list__button--edit {
+    left: 75%;
+  }
+  &.tag-list__button--delete {
+    left: 85%;
+  }
+}
+.tag-list__content {
+  clear: both;
+  @extend .clearfix;
+}
