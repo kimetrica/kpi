@@ -7,3 +7,9 @@ def dev_mode(request):
     if settings.TRACKJS_TOKEN:
         out['trackjs_token'] = settings.TRACKJS_TOKEN
     return out
+
+def linked_services(request):
+    return {
+        u'kobocat_url': settings.KOBOCAT_URL,
+        u'enketo_url': settings.ENKETO_SERVER,
+    }

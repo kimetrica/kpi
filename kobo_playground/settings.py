@@ -153,6 +153,7 @@ REST_FRAMEWORK = {
 
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
     'kpi.context_processors.dev_mode',
+    'kpi.context_processors.linked_services',
 )
 
 # This is very brittle (can't handle references to missing images in CSS);

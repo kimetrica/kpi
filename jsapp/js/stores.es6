@@ -104,7 +104,17 @@ var surveyStateStore = Reflux.createStore({
       this.trigger(chz);
     }
   },
-})
+});
+
+var linkedServicesStore = Reflux.createStore({
+  init () {
+    var enketo = document.head.querySelector('meta[name=link-enketo]');
+    this.enketo = enketo && enketo.content;
+
+    var kobocat = document.head.querySelector('meta[name=link-kobocat]');
+    this.kobocat = kobocat && kobocat.content;
+  },
+});
 
 var assetSearchStore = Reflux.createStore({
   init () {
@@ -522,6 +532,7 @@ assign(stores, {
   session: sessionStore,
   userExists: userExistsStore,
   surveyState: surveyStateStore,
+  linkedServices: linkedServicesStore,
 });
 
 module.exports = stores
