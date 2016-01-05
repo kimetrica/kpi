@@ -52,7 +52,9 @@
     "underscore": "^1.8.3"
   },
   "scripts": {
-    "test": "grunt test"
+    "start": "NODE_ENV=development node webpack.dev.server.js",
+    "preview": "NODE_ENV=production node webpack.preview.server.js",
+    "test": "gulp browserify && node ./node_modules/mocha-phantomjs/bin/mocha-phantomjs test/tests.html"
   },
   "repository": {
     "type": "git",
