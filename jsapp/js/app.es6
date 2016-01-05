@@ -57,7 +57,7 @@ mixins.taggedAsset = {
   tagChange (tags/*, changedTag*/) {
     var uid = this.props.params.assetid || this.props.params.uid;
     actions.resources.updateAsset(uid, {
-      tag_string: tags.join(',')
+      tags: tags
     });
   },
   linkTagState () {
@@ -952,7 +952,11 @@ var FormDownload = React.createClass({
     }
   },
   componentDidMount () {
-    this.listenTo(assetStore, this.assetStoreTriggered);
+    dataInterface.getAsset({uid: this.props.params.assetid}).then((asset)=>{
+      this.setState({
+        asset: asset
+      });
+    });
   },
   getInitialState () {
     return {
