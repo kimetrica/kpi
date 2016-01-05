@@ -2,11 +2,12 @@ import {runRoutes} from './app';
 import $ from 'jquery';
 
 
-var el = (function(){
-  var $d = $('<div>', {'class': 'kpiapp'});
-  $('body').prepend($d);
-  return $d.get(0);
-})();
+var el = document.getElementById('kpiapp');
+if (!el) {
+    el = document.createElement('div');
+    el.id = 'kpiapp';
+    document.body.appendChild(el);
+}
 
 window.csrftoken = $('input[name=csrfmiddlewaretoken]').eq(0).val() || $('meta[name=csrf-token]').attr('content');
 
@@ -17,7 +18,7 @@ function csrfSafeMethod(method) {
 $.ajaxSetup({
     beforeSend: function(xhr, settings) {
         if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-            xhr.setRequestHeader('X-CSRFToken', csrftoken);
+            xhr.setRequestHeader('X-CSRFToken', window.csrftoken);
         }
     }
 });
