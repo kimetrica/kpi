@@ -39,49 +39,6 @@ var assetLibraryStore = Reflux.createStore({
   }
 });
 
-
-var historyStore = Reflux.createStore({
-  __historyKey: 'user.history',
-  init () {
-    if (this.__historyKey in localStorage) {
-      try {
-        this.history = JSON.parse(localStorage.getItem(this.__historyKey));
-      } catch (e) {
-        console.error('could not load history from localStorage', e);
-      }
-    }
-    if (!this.history) {
-      this.history = [];
-    }
-    this.listenTo(actions.navigation.historyPush, this.historyPush);
-    this.listenTo(actions.auth.logout.completed, this.historyClear);
-    this.listenTo(actions.resources.deleteAsset.completed, this.onDeleteAssetCompleted);
-  },
-  historyClear () {
-    localStorage.removeItem(this.__historyKey);
-  },
-  onDeleteAssetCompleted (deleted) {
-    var oneDeleted = false;
-    this.history = this.history.filter(function(asset){
-      var match = asset.uid === deleted.uid;
-      if (match) {
-        oneDeleted = true;
-      }
-      return !match;
-    });
-    if (oneDeleted) {
-      this.trigger(this.history);
-    }
-  },
-  historyPush (item) {
-    this.history = [
-      item, ...this.history.filter(function(xi){ return item.uid !== xi.uid; })
-    ];
-    localStorage.setItem(this.__historyKey, JSON.stringify(this.history));
-    this.trigger(this.history);
-  }
-});
-
 var tagsStore = Reflux.createStore({
   init () {
     this.queries = {};
@@ -243,6 +200,9 @@ var assetStore = Reflux.createStore({
   noteRelatedUsers: function (data) {
     // this preserves usernames in the store so that the list does not
     // reorder or drop users depending on subsequent server responses
+    if (!this.permissions) {
+      return;
+    }
     if (!this.relatedUsers[data.uid]) {
       this.relatedUsers[data.uid] = [];
     }
@@ -394,9 +354,12 @@ var allAssetsStore = Reflux.createStore({
     }, 500);
   },
   registerAssetOrCollection (asset) {
-    asset.tags = asset.tag_string.split(',').filter((tg) => {
-      return tg.length > 1;
-    });
+    if (asset.tag_string && !asset.tags) {
+      asset.tags = asset.tag_string.split(',').filter((tg) => {
+        return tg.length > 1;
+      });
+      delete asset.tag_string;
+    }
     this.byUid[asset.uid] = asset;
     this.callCallbacks(asset);
   },
@@ -531,7 +494,6 @@ stores.collections = Reflux.createStore({
 });
 
 assign(stores, {
-  history: historyStore,
   tags: tagsStore,
   pageState: pageStateStore,
   assetSearch: assetSearchStore,
