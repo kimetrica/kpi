@@ -10,6 +10,9 @@ function parseTags (asset) {
 }
 
 function parseResponsePermissions (resp) {
+  if (!resp.owner__username) {
+    return {};
+  }
   var out = {};
   var pp = parsePermissions(resp.owner__username, resp.permissions);
   out.parsedPermissions = pp;
@@ -52,14 +55,27 @@ function parseSettings (asset) {
 }
 
 function parsed (asset) {
-  return assign(asset,
+  var _p = assign(asset,
       parseSettings(asset),
-      parseResponsePermissions(asset),
-      parseTags(asset));
+      parseResponsePermissions(asset));
+  if (_p.tag_string) {
+    return assign(_p, parseTags(asset));
+  } else {
+    return _p;
+  }
 }
 
-module.exports = {
-  parseResponsePermissions: parseResponsePermissions,
-  parseTags: parseTags,
+function prepareAsset (asset) {
+  if (!asset.tags) {
+    asset.tags = [];
+  }
+  return asset;
+}
+
+export default {
   parsed: parsed,
-};
+  prepareAsset: prepareAsset,
+  parseTags: parseTags,
+  parseResponsePermissions: parseResponsePermissions,
+}
+

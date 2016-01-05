@@ -11,6 +11,7 @@ import stores from './stores';
 import bem from './bem';
 import actions from './actions';
 import ui from './ui';
+
 import {
   formatTime,
   customConfirm,
@@ -678,11 +679,11 @@ mixins.droppable = {
       }, this.state.url ? {
         destination: this.state.url,
       } : null
-    )).done((data/*, status, jqxhr*/)=> {
+    )).then((data)=> {
       window.setTimeout((()=>{
         dataInterface.getImportDetails({
           uid: data.uid,
-        }).done((importData/*, status, jqxhr*/) => {
+        }).done((importData) => {
           if (importData.status === 'complete') {
             var assetData = importData.messages.updated || importData.messages.created;
             var assetUid = assetData && assetData.length > 0 && assetData[0].uid,
@@ -703,8 +704,8 @@ mixins.droppable = {
           log('import failed', failData);
         });
       }), 2500);
-    }).fail((jqxhr)=> {
-      log('Failed to create import: ', jqxhr);
+    }).catch((error)=> {
+      log('Failed to create import: ', error);
       alertify.error(t('failed to create import'));
     });
   },
@@ -721,11 +722,6 @@ mixins.droppable = {
 };
 
 mixins.ancestorBreadcrumb = {
-  componentDidMount () {
-  },
-  // getInitialState () {
-  //   return {}
-  // },
   renderAncestorBreadcrumb (ancestors) {
     return (
         <ui.Breadcrumb>

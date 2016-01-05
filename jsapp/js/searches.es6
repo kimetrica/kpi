@@ -52,7 +52,6 @@ const initialState = assign({
 function SearchContext(opts={}) {
   var ctx = this;
   var debounceTime = opts.debounceTime || 500;
-  var jqxhrs = {};
 
   var search = Reflux.createAction({
     children: [
@@ -192,25 +191,18 @@ function SearchContext(opts={}) {
     }
 
     if (isSearch) {
-      // cancel existing searches
-      if (jqxhrs.search) {
-        jqxhrs.search.searchAborted = true;
-        jqxhrs.search.abort();
-        jqxhrs.search = false;
-      }
+      searchDataInterface.abortAll();
     }
     latestSearchData = {params: qData, dataObject: dataObject};
     var req = searchDataInterface.assets(qData)
-      .done(function(data){
+      .then(function(data){
         search.completed(dataObject, data, {
           cacheAsDefaultSearch: _opts.cacheAsDefaultSearch,
         });
       })
-      .fail(function(xhr){
+      .catch(function(xhr){
         search.failed(xhr, dataObject);
       });
-
-    jqxhrs[ isSearch ? 'search' : 'default' ] = req;
 
     if (isSearch) {
       searchStore.update({
@@ -231,7 +223,7 @@ function SearchContext(opts={}) {
           cacheAsDefaultSearch: false,
         });
       })
-      .fail(function(xhr){
+      .catch(function(xhr){
         search.failed(xhr, latestSearchData.dataObject);
       });
   });
@@ -282,9 +274,7 @@ function SearchContext(opts={}) {
     // })
   });
   search.cancel.listen(function(){
-    if (jqxhrs.search) {
-      jqxhrs.search.abort();
-    }
+    searchDataInterface.abortAll();
     searchStore.update(assign({
       cleared: true
     }, clearSearchState));
