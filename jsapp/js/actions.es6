@@ -250,14 +250,14 @@ actions.misc = Reflux.createActions({
 
 actions.misc.checkUsername.listen(function(username){
   dataInterface.queryUserExistence(username)
-    .done(actions.misc.checkUsername.completed)
-    .fail(actions.misc.checkUsername.failed_);
+    .then(actions.misc.checkUsername.completed)
+    .catch(actions.misc.checkUsername.failed_);
 });
 actions.resources.createImport.listen(function(contents){
   if (contents.base64Encoded) {
     dataInterface.postCreateBase64EncodedImport(contents)
-      .done(actions.resources.createImport.completed)
-      .fail(actions.resources.createImport.failed);
+      .then(actions.resources.createImport.completed)
+      .catch(actions.resources.createImport.failed);
   } else if (contents.content) {
     dataInterface.createResource(contents);
   }
@@ -282,14 +282,14 @@ actions.resources.createResource.failed.listen(function(){
 
 actions.resources.createSnapshot.listen(function(details){
   dataInterface.createAssetSnapshot(details)
-    .done(actions.resources.createSnapshot.completed)
-    .fail(actions.resources.createSnapshot.failed);
+    .then(actions.resources.createSnapshot.completed)
+    .catch(actions.resources.createSnapshot.failed);
 });
 
 actions.resources.listTags.listen(function(data){
   dataInterface.listTags(data)
-    .done(actions.resources.listTags.completed)
-    .fail(actions.resources.listTags.failed);
+    .then(actions.resources.listTags.completed)
+    .catch(actions.resources.listTags.failed);
 });
 
 actions.resources.listTags.completed.listen(function(results){
@@ -303,11 +303,11 @@ actions.resources.listTags.completed.listen(function(results){
 actions.resources.updateAsset.listen(function(uid, values){
   return new Promise(function(resolve, reject){
     dataInterface.patchAsset(uid, values)
-      .done(function(asset){
+      .then(function(asset){
         actions.resources.updateAsset.completed(asset);
         resolve(asset);
       })
-      .fail(function(...args){
+      .catch(function(...args){
         reject(args)
       });
   })
@@ -315,10 +315,10 @@ actions.resources.updateAsset.listen(function(uid, values){
 
 actions.resources.deployAsset.listen(function(uid, form_id_string, dialog){
   dataInterface.deployAsset(uid, form_id_string)
-    .done((data) => {
+    .then((data) => {
       actions.resources.deployAsset.completed(data, dialog);
     })
-    .fail((data) => {
+    .catch((data) => {
       actions.resources.deployAsset.failed(data, dialog);
     });
 });
@@ -384,11 +384,11 @@ actions.resources.deployAsset.failed.listen(function(data, dialog){
 actions.resources.createResource.listen(function(details){
   return new Promise(function(resolve, reject){
     dataInterface.createResource(details)
-      .done(function(asset){
+      .then(function(asset){
         actions.resources.createResource.completed(asset);
         resolve(asset);
       })
-      .fail(function(...args){
+      .catch(function(...args){
         actions.resources.createResource.failed(...args)
         reject(args);
       });
@@ -401,74 +401,74 @@ actions.resources.deleteAsset.listen(function(details, params={}){
     onComplete = params.onComplete;
   }
   dataInterface.deleteAsset(details)
-    .done(function(/*result*/){
+    .then(function(/*result*/){
       actions.resources.deleteAsset.completed(details);
       if (onComplete) {
         onComplete(details);
       }
     })
-    .fail(actions.resources.deleteAsset.failed);
+    .catch(actions.resources.deleteAsset.failed);
 });
 actions.resources.readCollection.listen(function(details){
   dataInterface.readCollection(details)
-      .done(actions.resources.readCollection.completed)
-      .fail(function(req, err, message){
+      .then(actions.resources.readCollection.completed)
+      .catch(function(req, err, message){
         actions.resources.readCollection.failed(details, req, err, message);
       });
 });
 
 actions.resources.deleteCollection.listen(function(details){
   dataInterface.deleteCollection(details)
-    .done(function(result){
+    .then(function(result){
       actions.resources.deleteCollection.completed(details, result);
     })
-    .fail(actions.resources.deleteCollection.failed);
+    .catch(actions.resources.deleteCollection.failed);
 });
 
 actions.resources.cloneAsset.listen(function(details, opts={}){
   dataInterface.cloneAsset(details)
-    .done(function(...args){
+    .then(function(...args){
       actions.resources.createAsset.completed(...args);
       actions.resources.cloneAsset.completed(...args);
       if (opts.onComplete) {
         opts.onComplete(...args);
       }
     })
-    .fail(actions.resources.cloneAsset.failed);
+    .catch(actions.resources.cloneAsset.failed);
 });
 
 actions.search.assets.listen(function(queryString){
   dataInterface.searchAssets(queryString)
-    .done(function(...args){
+    .then(function(...args){
       actions.search.assets.completed.apply(this, [queryString, ...args]);
     })
-    .fail(function(...args){
+    .catch(function(...args){
       actions.search.assets.failed.apply(this, [queryString, ...args]);
     });
 });
 
 actions.search.libraryDefaultQuery.listen(function(){
   dataInterface.libraryDefaultSearch()
-    .done(actions.search.libraryDefaultQuery.completed)
-    .fail(actions.search.libraryDefaultQuery.failed);
+    .then(actions.search.libraryDefaultQuery.completed)
+    .catch(actions.search.libraryDefaultQuery.failed);
 });
 
 actions.search.assetsWithTags.listen(function(queryString){
   dataInterface.assetSearch(queryString)
-    .done(actions.search.assetsWithTags.completed)
-    .fail(actions.search.assetsWithTags.failed);
+    .then(actions.search.assetsWithTags.completed)
+    .catch(actions.search.assetsWithTags.failed);
 });
 
 actions.search.tags.listen(function(queryString){
   dataInterface.searchTags(queryString)
-    .done(actions.search.searchTags.completed)
-    .fail(actions.search.searchTags.failed);
+    .then(actions.search.searchTags.completed)
+    .catch(actions.search.searchTags.failed);
 });
 
 actions.permissions.assignPerm.listen(function(creds){
   dataInterface.assignPerm(creds)
-    .done(actions.permissions.assignPerm.completed)
-    .fail(actions.permissions.assignPerm.failed);
+    .then(actions.permissions.assignPerm.completed)
+    .catch(actions.permissions.assignPerm.failed);
 });
 actions.permissions.assignPerm.completed.listen(function(val){
   actions.resources.loadAsset({url: val.content_object});
@@ -479,10 +479,10 @@ actions.permissions.removePerm.listen(function(details){
     throw new Error('removePerm needs a content_object_uid parameter to be set');
   }
   dataInterface.removePerm(details.permission_url)
-    .done(function(resp){
+    .then(function(resp){
       actions.permissions.removePerm.completed(details.content_object_uid, resp);
     })
-    .fail(actions.permissions.removePerm.failed);
+    .catch(actions.permissions.removePerm.failed);
 });
 
 actions.permissions.removePerm.completed.listen(function(uid){
@@ -490,16 +490,16 @@ actions.permissions.removePerm.completed.listen(function(uid){
 });
 
 actions.auth.login.listen(function(creds){
-  dataInterface.login(creds).done(function(resp1){
-    dataInterface.selfProfile().done(function(data){
+  dataInterface.login(creds).then(function(resp1){
+    dataInterface.selfProfile().then(function(data){
         if(data.username) {
           actions.auth.login.loggedin(data);
         } else {
           actions.auth.login.passwordfail(resp1);
         }
-      }).fail(actions.auth.login.failed);
+      }).catch(actions.auth.login.failed);
   })
-    .fail(actions.auth.login.failed);
+    .catch(actions.auth.login.failed);
 });
 
 // reload so a new csrf token is issued
@@ -510,37 +510,26 @@ actions.auth.logout.completed.listen(function(){
 });
 
 actions.auth.logout.listen(function(){
-  dataInterface.logout().done(actions.auth.logout.completed).fail(function(){
+  dataInterface.logout().then(actions.auth.logout.completed).catch(function(){
     console.error('logout failed for some reason. what should happen now?');
   });
 });
 actions.auth.verifyLogin.listen(function(){
     dataInterface.selfProfile()
-        .done((data/*, msg, req*/)=>{
+        .then((data/*, msg, req*/)=>{
           if (data.username) {
             actions.auth.verifyLogin.loggedin(data);
           } else {
             actions.auth.verifyLogin.anonymous(data);
           }
         })
-        .fail(actions.auth.verifyLogin.failed);
+        .catch(actions.auth.verifyLogin.failed);
 });
 
 actions.resources.loadAsset.listen(function(params){
-  var dispatchMethodName;
-  if (params.url) {
-    dispatchMethodName = params.url.indexOf('collections') === -1 ?
-        'getAsset' : 'getCollection';
-  } else {
-    dispatchMethodName = {
-      c: 'getCollection',
-      a: 'getAsset'
-    }[params.id[0]];
-  }
-
-  dataInterface[dispatchMethodName](params)
-      .done(actions.resources.loadAsset.completed)
-      .fail(actions.resources.loadAsset.failed);
+  dataInterface.getAsset({uid: params.id})
+      .then(actions.resources.loadAsset.completed)
+      .catch(actions.resources.loadAsset.failed);
 });
 
 actions.resources.loadAsset.completed.listen(function(asset){
@@ -549,35 +538,35 @@ actions.resources.loadAsset.completed.listen(function(asset){
 
 actions.resources.loadAssetContent.listen(function(params){
   dataInterface.getAssetContent(params)
-      .done(function(data, ...args) {
+      .then(function(data, ...args) {
         // data.sheeted = new Sheeted([['survey', 'choices', 'settings'], data.data])
         actions.resources.loadAssetContent.completed(data, ...args);
       })
-      .fail(actions.resources.loadAssetContent.failed);
+      .catch(actions.resources.loadAssetContent.failed);
 });
 
 actions.resources.listAssets.listen(function(){
   dataInterface.listAllAssets()
-      .done(actions.resources.listAssets.completed)
-      .fail(actions.resources.listAssets.failed);
+      .then(actions.resources.listAssets.completed)
+      .catch(actions.resources.listAssets.failed);
 });
 
 actions.resources.listSurveys.listen(function(){
   dataInterface.listSurveys()
-      .done(actions.resources.listAssets.completed)
-      .fail(actions.resources.listAssets.failed);
+      .then(actions.resources.listAssets.completed)
+      .catch(actions.resources.listAssets.failed);
 });
 
 actions.resources.listCollections.listen(function(){
   dataInterface.listCollections()
-      .done(actions.resources.listCollections.completed)
-      .fail(actions.resources.listCollections.failed);
+      .then(actions.resources.listCollections.completed)
+      .catch(actions.resources.listCollections.failed);
 });
 
 actions.resources.listQuestionsAndBlocks.listen(function(){
   dataInterface.listQuestionsAndBlocks()
-      .done(actions.resources.listAssets.completed)
-      .fail(actions.resources.listAssets.failed);
+      .then(actions.resources.listAssets.completed)
+      .catch(actions.resources.listAssets.failed);
 });
 
 module.exports = actions;
