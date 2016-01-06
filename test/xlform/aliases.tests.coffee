@@ -1,5 +1,6 @@
-$aliases = require('../../jsapp/xlform/src/model.aliases')
 {expect} = require('../helper/fauxChai')
+
+$aliases = require('../../jsapp/xlform/src/model.aliases')
 
 module.exports = do ->
   expectSorted = (q)->
@@ -17,7 +18,6 @@ module.exports = do ->
             'begin_group',
             'end group',
             'end_group',
-            'group',
             ])
         it '[repeats]', ->
           expectSorted($aliases('repeat')).toEqual([
@@ -25,7 +25,6 @@ module.exports = do ->
             'begin_repeat',
             'end repeat',
             'end_repeat',
-            'repeat',
             ])
     describe 'custom queries', ->
       it '[groupsOrRepeats]', ->
@@ -38,8 +37,6 @@ module.exports = do ->
           'end repeat',
           'end_group',
           'end_repeat',
-          'group',
-          'repeat',
           ])
 
       it '[groupable]', ->
@@ -56,8 +53,6 @@ module.exports = do ->
           'end score',
           'end_group',
           'end_repeat',
-          'group',
-          'repeat',
           ])
       it '[availableSheetNames]', ->
         expectSorted($aliases.q.requiredSheetNameList()).toEqual([
@@ -69,13 +64,11 @@ module.exports = do ->
         expectGroupableParse = (s)->
           expect($aliases.q.testGroupable(s))
         it 'parses group properly', ->
-          expectGroupableParse('group').toEqual({type: 'group', begin: true})
           expectGroupableParse('begin group').toEqual({type: 'group', begin: true})
           expectGroupableParse('begin_group').toEqual({type: 'group', begin: true})
           expectGroupableParse('end group').toEqual({type: 'group', begin: false})
           expectGroupableParse('end_group').toEqual({type: 'group', begin: false})
         it 'parses repeat properly', ->
-          expectGroupableParse('repeat').toEqual({type: 'repeat', begin: true})
           expectGroupableParse('begin repeat').toEqual({type: 'repeat', begin: true})
           expectGroupableParse('begin_repeat').toEqual({type: 'repeat', begin: true})
           expectGroupableParse('end repeat').toEqual({type: 'repeat', begin: false})
