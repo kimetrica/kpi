@@ -202,7 +202,7 @@ var CollectionLanding = React.createClass({
                 <i />
                 {t('new block inside "___"').replace('___', collectionIdentifier)}
               </bem.CollectionNav__button>
-              <li>
+              <li className="mdl-menu__item">
                 <Dropzone onDropFiles={this.dropFiles} params={{destination: false}} fileInput>
                   <bem.CollectionNav__button m={['upload', 'upload-block']} className="mdl-menu__item">
                     <i className='fa fa-icon fa-cloud fa-fw' />
