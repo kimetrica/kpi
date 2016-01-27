@@ -349,6 +349,7 @@ actions.resources.deployAsset.failed.listen(function(data, dialog){
                             !data.responseJSON.detail)) {
     // failed to retrieve a valid response from the server
     // setContent() removes the input box, but the value is retained
+    console.error(data);
     dialogContent = `
       <p>${t('please check your connection and try again.')}</p>
       <p>${t('if this problem persists, contact support@kobotoolbox.org')}</p>
