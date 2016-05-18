@@ -56,6 +56,7 @@ INSTALLED_APPS = (
     'mptt',
     'haystack',
     'kpi.apps.KpiConfig',
+    'loginas',
     'hub',
     'webpack_loader',
     'registration', # Must come AFTER kpi
@@ -107,6 +108,7 @@ ALLOWED_ANONYMOUS_PERMISSIONS = (
     'kpi.view_asset',
 )
 
+CAN_LOGIN_AS = lambda request, target_user: request.user.is_superuser
 
 # Database
 # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
