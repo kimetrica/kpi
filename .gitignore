@@ -18,5 +18,5 @@ tmp
 staticfiles
 .sass-cache
 webpack-stats.json
-sensitive_data.json
-
+docker/run_django.sh
+log
