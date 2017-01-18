@@ -24,28 +24,57 @@
 // Color definitions
 @import "../../../node_modules/material-design-lite/src/_color-definitions";
 
+// MET Colors
+// See http://www.color-blindness.com/color-name-hue/
+$raw-siena:              #D97A4C;  // Links
+$green-house:            #4A6437;  // Navbar background
+$shuttle-grey:           #626A76;  // Borders
+$jumbo:                  #93938F;  // Text
+$charcoal:               #444;     // Headings
+
+// Bootstrap Grays
+$gray:                   $jumbo;
+$gray-base:              #000 !default;
+$gray-darker:            lighten($gray-base, 13.5%) !default; // #222
+$gray-dark:              darken($gray, 20%) !default;
+$gray-light:             lighten($gray, 20%) !default;
+$gray-lighter:           lighten($gray-base, 93.5%) !default; // #eee
+
+// Bootstrap Brand Colors
+$brand-primary:         $raw-siena !default;
+$brand-success:         #4CAF50 !default;
+$brand-info:            #9C27B0 !default;
+$brand-warning:         $raw-siena !default;
+$brand-danger:          #e51c23 !default;
+
 // NEW COLORS (March 2016)
+// Kobo hard-codes $cool-gray and $cool-green as a color in many places,
+// so redefine the variable rather than change all the references
 $azure: "34, 150, 243";
 $black: #363636;
-$cool-gray: #a5b3bc;
+$cool-gray: $jumbo;
 $greyish-brown: #575757;
-$nav-menu-item-bg: #4d5e7b;
-$nav-menu-item-bg-active: #2196f3;
-$layout-header-bg-color: #4d5e7b !default;
-$cool-green: #52c5d0;
+$nav-menu-item-bg: $green-house;
+$nav-menu-item-bg-active: $green-house;
+$layout-header-bg-color: $green-house !default;
+$cool-green: $raw-siena;
 $cool-red: #ff556a;
 
 // MDL Overrides
-$color-primary: $azure !default;
-$color-accent: $azure !default;
-$color-primary-dark: $palette-indigo-600 !default;
+$color-primary: $brand-primary !default;
+$color-accent: $brand-primary !default;
+$color-primary-dark: $green-house !default;
 $preferred_font: "Roboto", "Helvetica", "Arial", sans-serif !default;
 $performance_font: "Roboto", "Helvetica", "Arial", sans-serif !default;
 
-$layout-text-color: #363636 !default;
-$layout-nav-color: white !default;
-$layout-drawer-nav-link-color: #7d8a93 !default;
-$layout-drawer-nav-link-active-bg: #f9f9f9 !default;
+$layout-text-color: $jumbo !default;
+$layout-nav-color: $gray-lighter !default;
+$layout-drawer-nav-link-color: $gray-lighter !default;
+$layout-drawer-nav-link-active-bg: #fff !default;
+
+$button-primary-color: $raw-siena !default;
+$heading-text-color: $charcoal;
+
 
 @import "../../../node_modules/material-design-lite/src/material-design-lite";
 
@@ -54,7 +83,7 @@ html {
 }
 
 body {
-    @extend .mdl-color--grey-100;
+    color: #fff;
 }
 
 .mdl-checkbox__tick-outline {
