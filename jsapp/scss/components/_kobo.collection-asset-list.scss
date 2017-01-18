@@ -4,7 +4,7 @@
   border-bottom: 1px solid transparentize($cool-gray, 0.7);
   > .asset-list-sorts__item {
     color: $cool-gray;
-    font-weight: 500;
+    font-weight: bold;
     position: relative;
     padding: 10px 0px;
     padding-top: 20px;
@@ -108,7 +108,7 @@ div.library {
   .asset-list__heading {
     margin: 10px;
     font-size: 18px;
-    color: $cool-gray;
+    color: $heading-text-color;
     // cursor: pointer;
   }
   .asset-items {
