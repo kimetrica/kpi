@@ -9,7 +9,7 @@
   opacity: 1;
   position: relative;
   a, a:hover {
-    color: $black;
+    color: $linkColor;
     text-decoration: none;
     font-weight: 400;
   }
@@ -48,9 +48,9 @@
     max-width:96%;
     text-overflow: ellipsis;
     overflow: hidden;
-    font-size: 15px;
+    font-size: 13px;
     vertical-align: top;
-    padding:4px 0px;
+    padding:5px 0px;
   }
 
   .asset-type-icon + .asset-row__celllink--name {

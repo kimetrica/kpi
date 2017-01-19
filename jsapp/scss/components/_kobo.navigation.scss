@@ -105,8 +105,8 @@ $headerAccountTextColor: #dbedf7;
             max-width: 180px;
             overflow: hidden;
             padding: 0px 8px;
-            font-size: 16px;
-            color: $headerAccountTextColor;
+            font-size: 13px;
+            color: $layout-drawer-nav-link-color;
         }
     }
     .k-account__menu {
@@ -139,11 +139,20 @@ $headerAccountTextColor: #dbedf7;
         }
     }
     .account-box__logo {
-        width: 185px;
+        width: 285px;
         height: 46px;
-        background: url("../img/kobologo.svg") no-repeat left bottom;
-        background-size: contain;
+        background: url("../img/dwnp.jpg") no-repeat;
+        background-size: auto 36px;
+        background-position: 0px 3px;
         display: block;
+        color: $layout-drawer-nav-link-color;
+        font-size: 24px;
+        font-weight: normal;
+        padding-top: 10px;
+    }
+    .account-box__logo::after {
+        content: 'DWNP Forms';
+        padding-left: 50px;
     }
     .mdl-menu__item {
         color: $layout-nav-color;
