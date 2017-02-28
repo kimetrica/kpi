@@ -26,11 +26,12 @@
 
 // MET Colors
 // See http://www.color-blindness.com/color-name-hue/
-$raw-siena:              #D97A4C;  // Links
-$green-house:            #4A6437;  // Navbar background
-$shuttle-grey:           #626A76;  // Borders
-$jumbo:                  #93938F;  // Text
-$charcoal:               #444;     // Headings
+$raw-siena:              #D97A4C;    // Links
+$green-house:            #4A6437;    // Navbar background
+$shuttle-grey:           #626A76;    // Borders
+$jumbo:                  #93938F;    // Text
+$charcoal:               #444;       // Headings
+$checkbox-color:         $raw-siena; // Checkbox background (tick color is white)
 
 // Bootstrap Grays
 $gray:                   $jumbo;
@@ -82,8 +83,9 @@ html {
     color: $black;
 }
 
+// Match Bootswatch Paperwhite theme
 body {
-    color: #fff;
+    background-color: #fff;
 }
 
 .mdl-checkbox__tick-outline {
