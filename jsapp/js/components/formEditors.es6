@@ -109,7 +109,7 @@ var ProjectSettings = React.createClass({
 
       var sharedWith = [];
       perms.forEach(function(perm) {
-        if (perm.user__username != owner && perm.user__username != 'AnonymousUser')
+        if (perm.user__username != owner && perm.user__username != 'AnonymousUser' && sharedWith.indexOf(perm.user__username) < 0)
           sharedWith.push(perm.user__username);
       });
     }
@@ -252,11 +252,13 @@ export var NewForm = React.createClass({
   render () {
     return (
       <ui.Modal open onClose={this.routeBack} title={t('Create New Project from Scratch')}>
-      <ProjectSettings
-        onSubmit={this.createAsset}
-        submitButtonValue={t('Create project')}
-        context='newForm'
-      />
+        <ui.Modal.Body>
+          <ProjectSettings
+            onSubmit={this.createAsset}
+            submitButtonValue={t('Create project')}
+            context='newForm'
+          />
+        </ui.Modal.Body>
       </ui.Modal>
     );
   },
@@ -325,7 +327,8 @@ export var ProjectDownloads = React.createClass({
   groupSepChange (e) {this.handleChange(e, 'groupSep');},
   handleSubmit (e) {
     e.preventDefault();
-    if (!this.state.type.endsWith('_legacy')) {
+
+    if (this.state.type.indexOf('_legacy') < 0) {
       let url = this.props.asset.deployment__data_download_links[
         this.state.type
       ];
@@ -400,7 +403,7 @@ export var ProjectDownloads = React.createClass({
                   </bem.FormModal__item>
                 : null
               ] : null
-            , this.state.type.endsWith('_legacy') ?
+            , this.state.type.indexOf('_legacy') > 0 ?
               <bem.FormModal__item m='downloads'>
                 <iframe src={
                     this.props.asset.deployment__data_download_links[

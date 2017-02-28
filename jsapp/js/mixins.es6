@@ -14,6 +14,7 @@ import stores from './stores';
 import bem from './bem';
 import actions from './actions';
 import ui from './ui';
+import $ from 'jquery';
 
 import {
   formatTime,
@@ -134,7 +135,8 @@ var dmix = {
     },
     survey: {
       innerRender: function () {
-        var docTitle = this.state.name || t('Untitled');
+        let docTitle = this.state.name || t('Untitled');
+        let formList = this.makeHref('forms');
         return (
           <DocumentTitle title={`${docTitle} | KoboToolbox`}>
             <bem.FormView m='scrollable'>
@@ -142,13 +144,17 @@ var dmix = {
                   <bem.FormView__row>
                     <bem.FormView__cell m='overview'>
                       <bem.FormView__label m='title'>
+                        <bem.FormView__link
+                          m='close'
+                          href={formList}
+                        />
                         {t('Form Overview')}
                       </bem.FormView__label>
                       {this.renderDeployments()}
                     </bem.FormView__cell>
                   </bem.FormView__row>
  
-                  { this.state.has_deployment ?
+                  { this.state.has_deployment && this.state.deployment__active ?
                     this.renderInstructions()
                   : null }
                 </bem.FormView__wrapper> 
@@ -203,7 +209,7 @@ var dmix = {
             <ui.MDLPopoverMenu id={"more-dl-popover"}>
               <bem.PopoverMenu__item>
                 <i className="k-icon-download" />
-                {t('Download as')}
+                {t('Download form as')}
               </bem.PopoverMenu__item>
               {downloads.map((dl)=>{
                 return (
@@ -435,47 +441,48 @@ var dmix = {
     //   preview_url: "https://enke.to/preview/::self"
     // };
     var deployment__links = this.state.deployment__links;
- 
+
+    var available__links = {
+        offline_url: {
+          label: t('Online-Offline (multiple submission)'),
+          desc: t('This allows online and offline submissions and is the best option for collecting data in the field. ')
+        },
+        url: {
+          label: t('Online-Only (multiple submissions)'),
+          desc: t('This is the best option when entering many records at once on a computer, e.g. for transcribing paper records')
+        },
+        iframe_url: {
+          label: t('Embeddable web form code'),
+          desc: t('Use this html5 code snippet to integrate your form on your own website using smaller margins. ')
+        },
+        preview_url: {
+          label: t('View only'),
+          desc: t('Use this version for testing, getting feedback. Does not allow submitting data. ')
+        }
+    };
+
     var deployment__links_list = [];
-    var label = undefined;
-    var desc = undefined;
     var value = undefined;
  
-    for (var key in deployment__links) {
-      value = deployment__links[key];
- 
-      switch(key) {
-        case 'offline_url':
-          label = t('Online-Offline (multiple submission)');
-          desc = t('This allows online and offline submissions and is the best option for collecting data in the field. ');
-          break;
-        case 'url':
-          label = t('Online-Only (multiple submissions)');
-          desc = t('This is the best option when entering many records at once on a computer, e.g. for transcribing paper records');
-          break;
-        case 'iframe_url':
-          label = t('Embeddable web form code');
-          desc = t('Use this html5 code snippet to integrate your form on your own website using smaller margins. ');
-          value = '<iframe src="'+deployment__links[key]+'" width="800" height="600"></iframe>';
-          break;
-        case 'preview_url':
-          label = t('View only');
-          desc = t('Use this version for testing, getting feedback. Does not allow submitting data. ');
-          break;
-      }
- 
+    for (var key in available__links) {
+      if (key == 'iframe_url')
+        value = '<iframe src="'+deployment__links[key]+'" width="800" height="600"></iframe>';
+      else
+        value = deployment__links[key];
+
       deployment__links_list.push(
         {
           key: key,
           value: value,
-          label: label,
-          desc: desc
+          label: available__links[key].label,
+          desc: available__links[key].desc
         }
       );
     }
  
     var kc_server = document.createElement('a');
     kc_server.href = this.state.deployment__identifier;
+    var kobocollect_url = kc_server.origin + '/' + this.state.owner__username;
  
     return (
       <bem.FormView__row m="collecting">
@@ -547,7 +554,7 @@ var dmix = {
               {t('on your Android device.')}
             </li>
             <li>{t('Click on')} <i className="k-icon-more-actions"></i> {t('to open settings.')}</li>
-            <li>{t('Enter the server URL') + ' ' + kc_server.origin + ' ' + t('and your username and password')}</li>
+            <li>{t('Enter the server URL') + ' ' + kobocollect_url + ' ' + t('and your username and password')}</li>
             <li>{t('Open "Get Blank Form" and select this project. ')}</li>
             <li>{t('Open "Enter Data."')}</li>
           </ol>
@@ -783,7 +790,9 @@ var dmix = {
                 {dvcount > 0 ? `v${dvcount}` : ''}
                 <span>
                   &nbsp;
-                  {this.state.deployment__active ? t('(deployed)') : t('(undeployed draft)')}
+                  {this.state.deployment__active ? t('(deployed)') :
+                    this.state.has_deployment ? t('(archived)') :
+                      t('(undeployed draft)')}
                 </span>
               </bem.FormView__group>
               {this.renderEditPreviewButtons()}
@@ -1005,16 +1014,17 @@ var dmix = {
 mixins.dmix = dmix;
  
 mixins.droppable = {
-  _forEachDroppedFile (evt, file/*, params={}*/) {
+  _forEachDroppedFile (evt, file, params={}) {
     var library = isLibrary(this.context.router);
     var baseName = library ? 'library-' : '';
+    var url = params.url || this.state.url;
     dataInterface.postCreateBase64EncodedImport(assign({
         base64Encoded: evt.target.result,
         name: file.name,
         library: library,
         lastModified: file.lastModified,
-      }, this.state.url ? {
-        destination: this.state.url,
+      }, url ? {
+        destination: url,
       } : null
     )).then((data)=> {
       window.setTimeout((()=>{
@@ -1033,6 +1043,8 @@ mixins.droppable = {
             } else {
               this.transitionTo(`${baseName}form-landing`, {assetid: assetUid});
             }
+            if (url)
+              notify(t('Replace operation completed'));
           }
           // If the import task didn't complete immediately, inform the user accordingly.
           else if (importData.status === 'processing') {
@@ -1326,15 +1338,56 @@ mixins.clickAssets = {
         this.transitionTo(`${this.baseName}form-edit`, {assetid: uid});
       },
       delete: function(uid/*, evt*/){
-        var q_ = t('You are about to permanently delete this form. Are you sure you want to continue?');
-        customConfirmAsync(q_)
-          .done(() => {
-            actions.resources.deleteAsset({uid: uid}, {
-              onComplete: ()=> {
-                this.refreshSearch && this.refreshSearch();
-              }
-            });
+        let asset = stores.selectedAsset.asset;
+        let dialog = alertify.dialog('confirm');
+        let deployed = asset.has_deployment;
+        let msg, onshow;
+        let onok = (evt, val) => {
+          actions.resources.deleteAsset({uid: uid}, {
+            onComplete: ()=> {
+              this.refreshSearch && this.refreshSearch();
+            }
           });
+        };
+
+        if (!deployed) {
+          msg = t('You are about to permanently delete this draft.');
+        } else {
+          msg = `
+            ${t('You are about to permanently delete this form.')}
+            <label class="alertify-toggle"><input type="checkbox"/> ${t('All data gathered for this form will be deleted.')}</label>
+            <label class="alertify-toggle"><input type="checkbox"/> ${t('All questions created for this form will be deleted.')}</label>
+            <label class="alertify-toggle"><input type="checkbox"/> ${t('The form associated with this project will be deleted.')}</label>
+            <label class="alertify-toggle alertify-toggle-important"><input type="checkbox" /> ${t('I understand that if I delete this project I will not be able to recover it.')}</label>
+          `;
+          onshow = (evt) => {
+            let ok_button = dialog.elements.buttons.primary.firstChild;
+            let $els = $('.alertify-toggle input');
+            ok_button.disabled = true;
+            $els.change(function () {
+              ok_button.disabled = false;
+              $els.each(function ( index ) {
+                if (!$(this).prop('checked')) {
+                  ok_button.disabled = true;
+                }
+              });
+            });
+          };
+        }
+        let opts = {
+          title: t('Delete Project'),
+          message: msg,
+          labels: {
+            ok: t('Delete'),
+            cancel: t('Cancel')
+          },
+          onshow: onshow,
+          onok: onok,
+          oncancel: () => {
+            dialog.destroy();
+          }
+        };
+        dialog.set(opts).show();
       },
       deploy: function(uid){
         let asset = stores.selectedAsset.asset;
@@ -1343,6 +1396,33 @@ mixins.clickAssets = {
           // to call `transitionTo()` from within `deployAsset()`
           this.transitionTo(`${this.baseName}form-landing`, {assetid: uid});
         });
+      },
+      archive: function(uid, evt) {
+        let asset = stores.selectedAsset.asset;
+        let dialog = alertify.dialog('confirm');
+        let opts = {
+          title: t('Archive Project'),
+          message: `${t('Are you sure you want to archive this project?')} <br/><br/>
+                     <strong>${t('Your form will not accept submissions while it is archived.')}</strong>`,
+          labels: {ok: t('Archive'), cancel: t('Cancel')},
+          onok: (evt, val) => {
+            actions.resources.setDeploymentActive(
+              {
+                asset: asset,
+                active: false
+              },
+              {onComplete: ()=> {
+                this.refreshSearch && this.refreshSearch();
+                notify(t('archived project'));
+              }}
+            );
+          },
+          oncancel: () => {
+            dialog.destroy();
+          }
+        };
+        dialog.set(opts).show();
+
       },
       sharing: function(uid){
         this.transitionTo(`${this.baseName}form-sharing`, {assetid: uid});

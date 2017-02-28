@@ -34,17 +34,20 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.authtoken.models import Token
+from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from taggit.models import Tag
 
 from .filters import KpiAssignedObjectPermissionsFilter
-from .filters import KpiObjectPermissionsFilter
+from .filters import AssetOwnerFilterBackend
+from .filters import KpiObjectPermissionsFilter, RelatedAssetPermissionsFilter
 from .filters import SearchFilter
 from .highlighters import highlight_xform
 from hub.models import SitewideMessage
 from .models import (
     Collection,
     Asset,
+    AssetVersion,
     AssetSnapshot,
     ImportTask,
     ObjectPermission,
@@ -68,6 +71,8 @@ from .renderers import (
     XlsRenderer,)
 from .serializers import (
     AssetSerializer, AssetListSerializer,
+    AssetVersionListSerializer,
+    AssetVersionSerializer,
     AssetSnapshotSerializer,
     SitewideMessageSerializer,
     CollectionSerializer, CollectionListSerializer,
@@ -462,26 +467,27 @@ class ImportTaskViewSet(viewsets.ReadOnlyModelViewSet):
 class AssetSnapshotViewSet(NoUpdateModelViewSet):
     serializer_class = AssetSnapshotSerializer
     lookup_field = 'uid'
-    queryset = AssetSnapshot.objects.none()
-    # permission_classes = (IsOwnerOrReadOnly,)
+    queryset = AssetSnapshot.objects.all()
 
     renderer_classes = NoUpdateModelViewSet.renderer_classes + [
         AssetSnapshotXFormRenderer,
     ]
 
-    def get_queryset(self):
+    def filter_queryset(self, queryset):
         if (self.action == 'retrieve' and
                 self.request.accepted_renderer.format == 'xml'):
             # The XML renderer is totally public and serves anyone, so
-            # /asset_snapshot/valid_uid/.xml is world-readable, even though
-            # /asset_snapshot/valid_uid/ requires ownership
-            return AssetSnapshot.objects.all()
-
-        user = self.request.user
-        if not user.is_anonymous():
-            return AssetSnapshot.objects.filter(owner=user)
+            # /asset_snapshot/valid_uid.xml is world-readable, even though
+            # /asset_snapshot/valid_uid/ requires ownership. Return the
+            # queryset unfiltered
+            return queryset
         else:
-            return AssetSnapshot.objects.none()
+            user = self.request.user
+            owned_snapshots = queryset.none()
+            if not user.is_anonymous():
+                owned_snapshots = queryset.filter(owner=user)
+            return owned_snapshots | RelatedAssetPermissionsFilter(
+                ).filter_queryset(self.request, queryset, view=self)
 
     @detail_route(renderer_classes=[renderers.TemplateHTMLRenderer])
     def xform(self, request, *args, **kwargs):
@@ -519,7 +525,29 @@ class AssetSnapshotViewSet(NoUpdateModelViewSet):
             return Response(response_data, template_name='preview_error.html')
 
 
-class AssetViewSet(viewsets.ModelViewSet):
+class AssetVersionViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
+    model = AssetVersion
+    lookup_field = 'uid'
+    filter_backends = (
+            AssetOwnerFilterBackend,
+        )
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return AssetVersionListSerializer
+        else:
+            return AssetVersionSerializer
+
+    def get_queryset(self):
+        _asset_uid = self.get_parents_query_dict()['asset']
+        _deployed = self.request.query_params.get('deployed', None)
+        _queryset = self.model.objects.filter(asset__uid=_asset_uid)
+        if _deployed is not None:
+            _queryset = _queryset.filter(deployed=_deployed)
+        return _queryset.filter(asset__uid=_asset_uid)
+
+
+class AssetViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     """
     * Assign a asset to a collection <span class='label label-warning'>partially implemented</span>
     * Run a partial update of a asset <span class='label label-danger'>TODO</span>
@@ -723,6 +751,11 @@ class AssetViewSet(viewsets.ModelViewSet):
         if user.is_anonymous():
             user = get_anonymous_user()
         serializer.save(owner=user)
+
+    def perform_destroy(self, instance):
+        if hasattr(instance, 'has_deployment') and instance.has_deployment:
+            instance.deployment.delete()
+        return super(AssetViewSet, self).perform_destroy(instance)
 
     def finalize_response(self, request, response, *args, **kwargs):
         ''' Manipulate the headers as appropriate for the requested format.

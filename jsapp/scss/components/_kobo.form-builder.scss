@@ -145,6 +145,22 @@
       width:calc(100% - 400px);
       padding:0px 20px;
     }
+    &--translations {
+      p {
+        margin: 0 0 0 10px;
+        line-height: 15px;
+        padding-top: 10px;
+        font-size: 11px;
+
+        small {
+          display: block;
+          color: #888;
+          &:before {
+            content: '+ ';
+          }
+        }
+      }
+    }
 
     &--buttonsTopRight {
       width:280px;
@@ -336,8 +352,23 @@
     }
   }
 
-  i.k-icon-help {
-    font-size: 26px;
-    color:$cool-gray;
+  .cascade-help {
+    text-align: right;
+    i {
+      font-size: 26px;
+      color:$cool-gray;
+    }
   }
+}
+
+.survey-editor {
+  > ul > li:last-child {
+    padding-bottom: 48px;
+  }
+  .ui-sortable-placeholder.lib-list__item {
+    border:1px dashed #d9dde1;
+    visibility:visible !important;
+    min-height:80px;
+    padding:0px;
+  }  
 }

@@ -200,7 +200,7 @@ bem.PopoverMenu__link = bem.PopoverMenu.__('link', '<a>');
 bem.AccountBox = BEM('account-box');
 bem.AccountBox__notifications = bem.AccountBox.__('notifications');
 bem.AccountBox__notifications__count = bem.AccountBox.__('notifications__count', '<span>');
-bem.AccountBox__name = bem.AccountBox.__('name', '<button>');
+bem.AccountBox__name = bem.AccountBox.__('name', '<div>');
 bem.AccountBox__username = bem.AccountBox.__('username', '<span>');
 bem.AccountBox__image = bem.AccountBox.__('image', '<span>');
 bem.AccountBox__logo = bem.AccountBox.__('logo', '<span>');
@@ -231,6 +231,9 @@ bem.tagSelect = BEM('tag-select');
 bem.collectionFilter = BEM('collection-filter');
 
 bem.PrintOnly = BEM('print-only');
+
+bem.GitRev = BEM('git-rev');
+bem.GitRev__item = bem.GitRev.__('item', '<div>');
 
 bem.create = BEM;
 

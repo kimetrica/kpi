@@ -195,7 +195,8 @@ var MainHeader = React.createClass({
           </bem.AccountBox__notifications>
           <bem.AccountBox__name
               onClick={this.toggleAccountMenuPopover}
-              onBlur={this.toggleAccountMenuPopover}>
+              onBlur={this.toggleAccountMenuPopover} 
+              tabIndex="-1">
             <bem.AccountBox__username>
               {accountName}
             </bem.AccountBox__username>
@@ -247,6 +248,23 @@ var MainHeader = React.createClass({
           <span>{t('not logged in')}</span>
     );
   },
+  renderGitRevInfo () {
+    if (stores.session.currentAccount && stores.session.currentAccount.git_rev) {
+      var gitRev = stores.session.currentAccount.git_rev;
+      return (
+        <bem.GitRev>
+          <bem.GitRev__item>
+            branch: {gitRev.branch}
+          </bem.GitRev__item>
+          <bem.GitRev__item>
+            commit: {gitRev.short}
+          </bem.GitRev__item>
+        </bem.GitRev>
+      );
+    }
+
+    return false;
+  },
   toggleFixedDrawer() {
     stores.pageState.toggleFixedDrawer();
   },
@@ -275,15 +293,6 @@ var MainHeader = React.createClass({
     }
   },
   renderFormViewHeader () {
-    var canUpdateSettings = false;
-    if (this.state.currentAccount) {
-    var currentUsername = this.state.currentAccount.username;
-      if (currentUsername == this.state.asset.owner__username)
-        canUpdateSettings = true;
-      if (this.state.asset && this.state.asset.access.change[currentUsername])
-        canUpdateSettings = true;
-    }
-
     return (
       <bem.FormView__tabbar>
         <bem.FormView__tabs>
@@ -335,7 +344,7 @@ var MainHeader = React.createClass({
                 </bem.PopoverMenu__link>
             </ui.MDLPopoverMenu>
           : null }
-          {canUpdateSettings && 
+          {this.userCanEditAsset() && 
             <bem.FormView__tab 
               m='settings' 
               className={this.state.activeRoute == '/forms/:assetid/data/settings' ? 'active' : ''} 
@@ -387,6 +396,15 @@ var MainHeader = React.createClass({
     }, 1500);
 
   },
+  userCanEditAsset() {
+    if (stores.session.currentAccount && this.state.asset) {
+      const currentAccount = stores.session.currentAccount;
+      if (currentAccount.is_superuser || currentAccount.username == this.state.asset.owner__username || this.state.asset.access.change[currentAccount.username])
+        return true;
+    }
+
+    return false;
+  },
   render () {
     if (stores.session && stores.session.currentAccount && stores.session.currentAccount.downtimeDate) {
       var mTime = moment(stores.session.currentAccount.downtimeDate);
@@ -394,11 +412,7 @@ var MainHeader = React.createClass({
       var downtimeMessage = [t('Scheduled server maintenance'), downtimeDate];
     }
 
-    var userCanEditAsset = false;
-    if (this.state.asset) {
-      if (stores.session.currentAccount.is_superuser || this.state.currentAccount.username == this.state.asset.owner__username || this.state.asset.access.change[this.state.currentAccount.username])
-        userCanEditAsset = true;
-    }
+    var userCanEditAsset = this.userCanEditAsset();
 
     return (
         <header className="mdl-layout__header">
@@ -469,6 +483,7 @@ var MainHeader = React.createClass({
               {this.renderFormViewHeader()}
             </bem.FormView__header>
           }
+          {this.renderGitRevInfo()}
         </header>
       );
   },

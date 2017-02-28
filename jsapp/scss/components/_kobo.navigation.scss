@@ -63,6 +63,10 @@ $headerAccountTextColor: #dbedf7;
     .account-box {
         margin-left: auto;
         position: relative;
+        padding-bottom:5px;
+        &:hover {
+            background-color: darken($layout-header-bg-color, 2.5%);
+        }
     }
     .account-box__notifications {
         display: inline-block;
@@ -163,6 +167,7 @@ $headerAccountTextColor: #dbedf7;
         line-height: 36px;
         vertical-align: middle;
         font-size: 16px;
+        text-transform: capitalize;
         i {
             font-size: 24px;
             width: 30px;
@@ -546,6 +551,29 @@ a.form-view__tab {
         i {
             font-size: 24px;
             margin-right: 8px;
+        }
+    }
+}
+
+.git-rev {
+    display: none;
+}
+
+@media screen and (min-width: 768px) {
+    .git-rev {
+        display: block;
+        position: fixed;
+        bottom: 0px;
+        left: 256px;
+        z-index:100;
+        .git-rev__item {
+            color: white;
+            opacity: 0.75;
+            background: darken($cool-green, 10%);
+            margin-right:5px;
+            padding:6px 12px;
+            display: inline-block;
+            font-size: 12px;
         }
     }
 }

@@ -4,22 +4,19 @@ set -e
 source /etc/profile
 
 KPI_WEB_SERVER="${KPI_WEB_SERVER:-uWSGI}"
-if [[ "${KPI_WEB_SERVER^^}" == 'UWSGI' ]]; then
-    exec /usr/local/bin/uwsgi --ini "${KPI_SRC_DIR}/uwsgi.ini"
+uwsgi_command="/usr/local/bin/uwsgi --ini ${KPI_SRC_DIR}/uwsgi.ini"
+if [[ "${KPI_WEB_SERVER,,}" == 'uwsgi' && -z "${NEW_RELIC_LICENSE_KEY}" ]]; then
+    echo 'Running `kpi` container with uWSGI application server.'
+    exec ${uwsgi_command}
+elif [[ "${KPI_WEB_SERVER,,}" == 'uwsgi' && ! -z "${NEW_RELIC_LICENSE_KEY}" ]]; then
+    echo 'Running `kpi` container with uWSGI application server and New Relic analytics.'
+    export NEW_RELIC_APP_NAME="${NEW_RELIC_APP_NAME:-KoBoForm}"
+    export NEW_RELIC_LOG="${NEW_RELIC_LOG:-stdout}"
+    export NEW_RELIC_LOG_LEVEL="${NEW_RELIC_LOG_LEVEL:-info}"
+    exec newrelic-admin run-program ${uwsgi_command}
 else
+    echo 'Running `kpi` container with `runserver_plus` debugging application server.'
     cd "${KPI_SRC_DIR}"
-
     pip install werkzeug ipython
-    python manage.py runserver_plus 0:8000 &
-    RUNSERVER_PID="$!"
-
-    celery -A kobo worker --beat --loglevel=info --logfile ${KPI_LOGS_DIR}/celery.log --pidfile=/tmp/celery.pid &
-    while [[ ! -f /tmp/celery.pid ]] || ! cat /tmp/celery.pid ; do
-        sleep 1
-    done
-    CELERY_PID="$(cat /tmp/celery.pid)"
-
-    trap "pkill -P ${RUNSERVER_PID}; kill ${CELERY_PID}" SIGINT SIGTERM SIGKILL
-    wait "${RUNSERVER_PID}"
-    pkill -P ${RUNSERVER_PID}; kill ${CELERY_PID}
+    exec python manage.py runserver_plus 0:8000
 fi

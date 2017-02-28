@@ -16,7 +16,10 @@ jsapp/js/refactored.es6
 whoosh_index
 tmp
 staticfiles
+.cache
 .sass-cache
 webpack-stats.json
+sensitive_data.json
+test/compiled/*
 docker/run_django.sh
 log
