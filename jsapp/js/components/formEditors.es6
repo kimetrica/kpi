@@ -163,48 +163,6 @@ var ProjectSettings = React.createClass({
                 value={this.state.description}
                 onChange={this.descriptionChange}
               />
-            <label className="long">
-              {t('Please specify the country and the sector where this project will be deployed. ')}
-              {t('This information will be used to help you filter results on the project list page.')}
-            </label>
-          </bem.FormModal__item>
-
-          <bem.FormModal__item m='sector'>
-            <label htmlFor="sector">
-              {t('Sector')}
-            </label>
-            <Select
-                id="sector"
-                value={this.state.sector}
-                onChange={this.sectorChange}
-                options={sectors}
-              />
-          </bem.FormModal__item>
-          <bem.FormModal__item  m='country'>
-            <label htmlFor="country">
-              {t('Country')}
-            </label>
-            <Select
-              id="country"
-              value={this.state.country}
-              onChange={this.countryChange}
-              options={countries}
-            />
-          </bem.FormModal__item>
-          <bem.FormModal__item>
-            <label className="long">
-              {t('Help KoboToolbox improve this product by sharing the sector and country where this project will be deployed.')}
-              {t('All the information is submitted anonymously, and will not include the project name or description listed above.')}
-            </label>
-
-            <input type="checkbox"
-                id="share-metadata"
-                checked={this.state['share-metadata']}
-                onChange={this.shareMetadataChange}
-              />
-            <label htmlFor="share-metadata" className="inline">
-              {t('Share the sector and country with developers')}
-            </label>
           </bem.FormModal__item>
 
           {this.props.context == 'existingForm' && this.props.iframeUrl &&
