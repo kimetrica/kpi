@@ -55,7 +55,7 @@ def setup_env(deployment_name):
                                      'kobo-uwsgi-master.pid')
     env.kpi_path = os.path.join(env.home, env.kpi_path)
     env.pip_requirements_file = os.path.join(env.kpi_path,
-                                             'requirements/external_services.txt')
+                                             'dependencies/pip/external_services.txt')
 
 
 def deploy_ref(deployment_name, ref, force=False):
@@ -88,7 +88,7 @@ def deploy_ref(deployment_name, ref, force=False):
             run("bower install")
             run("npm install")
             run("grunt buildall")
-            run("npm run build-production")
+            run("npm run build")
 
             # KPI and KF share a virtualenv but have distinct settings modules
             with prefix('DJANGO_SETTINGS_MODULE=kobo.settings'):

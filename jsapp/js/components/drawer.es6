@@ -23,6 +23,7 @@ import {
   getAnonymousUserPermission,
   anonUsername,
   isLibrary,
+  supportUrl,
 } from '../utils';
 
 import SidebarFormsList from '../lists/sidebarForms';
@@ -106,10 +107,12 @@ var Drawer = React.createClass({
                   <i className="k-icon k-icon-github" />
                   {t('source')}
                 </a>
-                <a href='http://support.kobotoolbox.org/' className='k-drawer__link' target="_blank">
-                  <i className="k-icon k-icon-help" />
-                  {t('help')}
-                </a>
+                { stores.session.currentAccount ?
+                  <a href={supportUrl()} className='k-drawer__link' target="_blank">
+                    <i className="k-icon k-icon-help" />
+                    {t('help')}
+                  </a>
+                : null}
               </div>
             </div>
           </bem.Drawer>
@@ -275,7 +278,7 @@ var LibrarySidebar = React.createClass({
     //TODO: show the collections in the main pane?
   },
   createCollection () {
-    customPromptAsync('collection name?').then((val)=>{
+    customPromptAsync(t('Please enter the name of your new Collection. Collections can help you better organize your library, and it is possible to share each collection with different people.')).then((val)=>{
       dataInterface.createCollection({
         name: val,
       }).then((data)=>{
@@ -297,7 +300,7 @@ var LibrarySidebar = React.createClass({
     var collectionName = $(evt.currentTarget).data('collection-name');
 
     evt.preventDefault();
-    customPromptAsync('collection name?', collectionName).then((val)=>{
+    customPromptAsync(t('Please enter the name of your new Collection.'), collectionName).then((val)=>{
       actions.resources.updateCollection(collectionUid, {name: val}).then(
         (data) => {
           this.queryCollections();
