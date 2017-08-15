@@ -22,15 +22,9 @@ def get_perm_name(perm_name_prefix, model_instance):
     :return: The computed permission name.
     :rtype: str
     '''
-
     if not perm_name_prefix[-1] == '_':
-        perm_name_prefix+= '_'
-
-    perm_name= Permission.objects.get(
-        content_type=ContentType.objects.get_for_model(model_instance),
-        codename__startswith=perm_name_prefix
-    ).natural_key()[0]
-
+        perm_name_prefix += '_'
+    perm_name = perm_name_prefix + model_instance._meta.model_name
     return perm_name
 
 
@@ -50,6 +44,11 @@ class IsOwnerOrReadOnly(permissions.DjangoObjectPermissions):
     perms_map['OPTIONS']= perms_map['GET']
     perms_map['HEAD']= perms_map['GET']
 
+
 class PostMappedToChangePermission(IsOwnerOrReadOnly):
+    '''
+    Maps POST requests to the change_model permission instead of DRF's default
+    of add_model
+    '''
     perms_map = IsOwnerOrReadOnly.perms_map
     perms_map['POST'] = ['%(app_label)s.change_%(model_name)s']

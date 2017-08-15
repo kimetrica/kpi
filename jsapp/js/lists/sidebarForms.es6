@@ -1,7 +1,9 @@
-import React from 'react/addons';
+import React from 'react';
+import PropTypes from 'prop-types';
+import reactMixin from 'react-mixin';
+import autoBind from 'react-autobind';
 import Reflux from 'reflux';
-import {Navigation} from 'react-router';
-
+import { Link } from 'react-router';
 import mixins from '../mixins';
 import bem from '../bem';
 import ui from '../ui';
@@ -12,24 +14,18 @@ import SearchCollectionList from '../components/searchcollectionlist';
 import {
   parsePermissions,
   t,
-  assign,
-  isLibrary
+  assign
 } from '../utils';
 
-var SidebarFormsList = React.createClass({
-  mixins: [
-    searches.common,
-    Navigation,
-    Reflux.ListenerMixin,
-    Reflux.connect(stores.pageState)
-  ],
-  getInitialState () {
+class SidebarFormsList extends Reflux.Component {
+  constructor(props) {
+    super(props);
     var selectedCategories = {
       'Draft': false,
       'Deployed': false, 
       'Archived': false
     }
-    return {
+    this.state = {
       selectedCategories: selectedCategories,
       searchContext: searches.getSearchContext('forms', {
         filterParams: {
@@ -38,26 +34,33 @@ var SidebarFormsList = React.createClass({
         filterTags: 'asset_type:survey',
       })
     };
-  },
+    this.store = stores.pageState;
+    autoBind(this);
+  }
   componentDidMount () {
     this.listenTo(this.searchStore, this.searchChanged);
-  },
+    if (!this.isFormList())
+      this.searchDefault();
+  }
   componentWillReceiveProps () {
     this.listenTo(this.searchStore, this.searchChanged);
-  },
+  }
   searchChanged (searchStoreState) {
     this.setState(searchStoreState);
-  },
+  }
   renderMiniAssetRow (resource) {
-    var baseName = isLibrary(this.context.router) ? 'library-' : '';
+    var active = '';
+    if (resource.uid == this.currentAssetID())
+      active = ' active';
+
     return (
-        <bem.FormSidebar__item key={resource.uid}>
-          <bem.FormSidebar__itemlink href={this.makeHref(`${baseName}form-landing`, {assetid: resource.uid})}>
+        <bem.FormSidebar__item key={resource.uid} className={active}>
+          <Link to={`/forms/${resource.uid}`} className={`form-sidebar__itemlink`}>
             <ui.SidebarAssetName {...resource} />
-          </bem.FormSidebar__itemlink>
+          </Link>
         </bem.FormSidebar__item>
       );
-  },
+  }
   toggleCategory(c) {
     return function (e) {
     var selectedCategories = this.state.selectedCategories;
@@ -66,11 +69,39 @@ var SidebarFormsList = React.createClass({
         selectedCategories: selectedCategories,
       });
     }.bind(this)
-  },
+  }
   render () {
     var s = this.state;
+    var activeItems = 'defaultQueryCategorizedResultsLists';
+
+    // sync sidebar with main list when it is not a search query, allows for deletes to update the sidebar as well
+    // this is a temporary fix, a proper fix needs to update defaultQueryCategorizedResultsLists when deleting/archiving/cloning
+    if (s.searchState === 'done' && 
+        (s.searchString === false || s.searchString === "") &&
+        s.searchResultsFor && 
+        s.searchResultsFor.assetType === 'asset_type:survey')
+      activeItems = 'searchResultsCategorizedResultsLists';
+
+    if (s.searchState === 'loading' && s.searchString === false ) {
+      return (
+        <bem.Loading>
+          <bem.Loading__inner>
+            <i />
+            {t('loading...')} 
+          </bem.Loading__inner>
+        </bem.Loading>
+      );
+    }
+
     return (
       <bem.FormSidebar>
+        { 
+          s.defaultQueryState === 'done' && 
+          <bem.FormSidebar__label m={'active-projects'} className="is-edge">
+            <i className="k-icon-projects" />
+            {t('Active Projects')}
+          </bem.FormSidebar__label>
+        }
         {
           (() => {
             if (s.defaultQueryState === 'loading') {
@@ -86,7 +117,7 @@ var SidebarFormsList = React.createClass({
               return ['Deployed', 'Draft', 'Archived' /*, 'Deleted'*/].map(
                 (category) => {
                   var categoryVisible = this.state.selectedCategories[category];
-                  if (s.defaultQueryCategorizedResultsLists[category].length < 1) {
+                  if (s[activeItems][category].length < 1) {
                     categoryVisible = false;
                   }
                   return [
@@ -94,12 +125,13 @@ var SidebarFormsList = React.createClass({
                                             onClick={this.toggleCategory(category)}>
                       <i />
                       {t(category)}
-                      {` (${s.defaultQueryCategorizedResultsLists[category].length})`}
+                      <bem.FormSidebar__labelCount>
+                        {s[activeItems][category].length}
+                      </bem.FormSidebar__labelCount>
                     </bem.FormSidebar__label>,
                     <bem.FormSidebar__grouping m={[category, categoryVisible ? 'visible' : 'collapsed']}>
                       {
-                        s.defaultQueryCategorizedResultsLists[category].map(
-                          this.renderMiniAssetRow)
+                        s[activeItems][category].map(this.renderMiniAssetRow)
                       }
                     </bem.FormSidebar__grouping>
                   ];
@@ -114,7 +146,15 @@ var SidebarFormsList = React.createClass({
         </bem.FormSidebar__label>
       </bem.FormSidebar>
     );
-  },
-});
+  }
+};
+
+SidebarFormsList.contextTypes = {
+  router: PropTypes.object
+};
+
+reactMixin(SidebarFormsList.prototype, searches.common);
+reactMixin(SidebarFormsList.prototype, Reflux.ListenerMixin);
+reactMixin(SidebarFormsList.prototype, mixins.contextRouter);
 
 export default SidebarFormsList;

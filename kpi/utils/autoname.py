@@ -110,6 +110,12 @@ def autoname_fields_in_place(surv_content, destination_key):
             row['$given_name'] = _name
             _name = sluggify_label(_name,
                                    other_names=other_names.keys())
+            # We might be able to remove these next 4 lines because
+            # sluggify_label shouldn't be returning an empty string
+            # and these fields already have names (_has_name(r)==True).
+            # However, these lines were added when testing a large set
+            # of forms so it's possible some edge cases (e.g. arabic)
+            # still permit it
             if _name == '' and '$kuid' in row:
                 _name = '{}_{}'.format(row['type'], row['$kuid'])
             elif _name == '':
@@ -132,8 +138,9 @@ def autoname_fields_in_place(surv_content, destination_key):
                 _name = sluggify_label(_label,
                                        other_names=other_names.keys(),
                                        characterLimit=40)
-                _assign_row_to_name(row, _name)
-                continue
+                if _name not in ['', '_']:
+                    _assign_row_to_name(row, _name)
+                    continue
 
         # if no labels can be used, then use a combination of type (which is
         # always available) and kuid, which should always be unique
@@ -176,7 +183,9 @@ def autovalue_choices_in_place(surv_content, destination_key):
     choice_value_key = 'name'
     choices = OrderedDict()
     for choice in surv_choices:
-        _list_name = choice['list_name']
+        _list_name = choice.get('list_name')
+        if _list_name in ['', None]:
+            continue
         if _list_name not in choices:
             choices[_list_name] = []
         choices[_list_name].append(choice)
