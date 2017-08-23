@@ -1,12 +1,10 @@
-Thanks for signing up with KoBoToolbox!
+Thanks for signing up for Kimetrica KoBo!
 
-Confirming your account will give you full access to KoBoToolbox applications. Please visit the following url to finish activation of your new account.
+Confirming your account for username {{user}} will give you full access to KoBoToolbox applications. Please visit the following url to finish activation of your new account.
 
-{{user}}
 
-{{ kpi_protocol }}://{{ site.domain }}/accounts/activate/{{activation_key}}/
+https://{{ site.domain }}/forms/accounts/activate/{{activation_key}}/
 
-Please visit http://support.kobotoolbox.org to find information on how to get started. There you can also post questions to the community (recommended) or to us directly.
 
 Best,
-KoBoToolbox
+Kimetrica
