@@ -139,12 +139,10 @@ export class ProjectSettings extends React.Component {
             <label htmlFor="description">
               {t('Description')}
             </label>
-            <textarea type="text"
-                id="description"
-                placeholder={t('Enter short description here')}
-                value={this.state.description}
-                onChange={this.descriptionChange}
-              />
+            <TextareaAutosize
+              onChange={this.descriptionChange}
+              value={this.state.description}
+              placeholder={t('Enter short description here')} />
           </bem.FormModal__item>
 
           {this.props.context != 'existingForm' &&
