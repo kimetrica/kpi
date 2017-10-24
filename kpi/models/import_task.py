@@ -6,7 +6,7 @@ from os.path import splitext
 from collections import defaultdict
 from django.db import models
 from django.conf import settings
-from django.core.urlresolvers import get_script_prefix, resolve
+from django.core.urlresolvers import get_script_prefix, resolve, Resolver404
 from django.utils.six.moves.urllib import parse as urlparse
 from jsonfield import JSONField
 import requests
@@ -21,6 +21,9 @@ from rest_framework import exceptions
 def _resolve_url_to_asset_or_collection(item_path):
     if item_path.startswith(('http', 'https')):
         item_path = urlparse.urlparse(item_path).path
+    try:
+        resolve(item_path)
+    except Resolver404:
         if settings.KPI_PREFIX and (settings.KPI_PREFIX != '/') and \
                 item_path.startswith(settings.KPI_PREFIX):
             item_path = item_path.replace(settings.KPI_PREFIX, '', 1)

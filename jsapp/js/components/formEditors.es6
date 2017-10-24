@@ -116,7 +116,7 @@ export class ProjectSettings extends React.Component {
 
     return (
       <bem.FormModal__form onSubmit={this.onSubmit}>
-        {this.props.context == 'existingForm' && 
+        {this.props.context == 'existingForm' &&
           <bem.FormModal__item m={['actions', 'fixed']}>
             <button onClick={this.onSubmit} className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
               {this.props.submitButtonValue}
@@ -139,51 +139,10 @@ export class ProjectSettings extends React.Component {
             <label htmlFor="description">
               {t('Description')}
             </label>
-            <TextareaAutosize 
-              onChange={this.descriptionChange} 
-              value={this.state.description} 
+            <TextareaAutosize
+              onChange={this.descriptionChange}
+              value={this.state.description}
               placeholder={t('Enter short description here')} />
-          </bem.FormModal__item>
-          <bem.FormModal__item>
-            <label className="long">
-              {t('Please specify the country and the sector where this project will be deployed. ')}
-              {t('This information will be used to help you filter results on the project list page.')}
-            </label>
-          </bem.FormModal__item>
-
-          <bem.FormModal__item m='sector'>
-            <label htmlFor="sector">
-              {t('Sector')}
-            </label>
-            <Select
-                id="sector"
-                value={this.state.sector}
-                onChange={this.sectorChange}
-                options={sectors}
-              />
-          </bem.FormModal__item>
-          <bem.FormModal__item  m='country'>
-            <label htmlFor="country">
-              {t('Country')}
-            </label>
-            <Select
-              id="country"
-              value={this.state.country}
-              onChange={this.countryChange}
-              options={countries}
-            />
-          </bem.FormModal__item>
-          <bem.FormModal__item m='metadata-share'>
-            <input type="checkbox"
-                id="share-metadata"
-                checked={this.state['share-metadata']}
-                onChange={this.shareMetadataChange}
-              />
-            <label htmlFor="share-metadata">
-              {t('Help KoboToolbox improve this product by sharing the sector and country where this project will be deployed.')}
-              &nbsp;
-              {t('All the information is submitted anonymously, and will not include the project name or description listed above.')}
-            </label>
           </bem.FormModal__item>
 
           {this.props.context != 'existingForm' &&
@@ -371,8 +330,8 @@ export class ProjectDownloads extends React.Component {
             </bem.FormModal__item>
           :
             <bem.FormModal__item key={'s'}>
-              <input type="submit" 
-                     value={t('Download')} 
+              <input type="submit"
+                     value={t('Download')}
                      className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored"/>
             </bem.FormModal__item>
           ]}
