@@ -3,16 +3,19 @@ from django.views.i18n import javascript_catalog
 from hub.views import ExtraDetailRegistrationView
 from rest_framework.routers import DefaultRouter
 from rest_framework_extensions.routers import ExtendedDefaultRouter
+import private_storage.urls
 
 from kpi.views import (
     AssetViewSet,
     AssetVersionViewSet,
     AssetSnapshotViewSet,
+    SubmissionViewSet,
     UserViewSet,
     CurrentUserViewSet,
     CollectionViewSet,
     TagViewSet,
     ImportTaskViewSet,
+    ExportTaskViewSet,
     ObjectPermissionViewSet,
     SitewideMessageViewSet,
     AuthorizedApplicationUserViewSet,
@@ -35,6 +38,11 @@ asset_routes.register(r'versions',
                       base_name='asset-version',
                       parents_query_lookups=['asset'],
                       )
+asset_routes.register(r'submissions',
+                      SubmissionViewSet,
+                      base_name='submission',
+                      parents_query_lookups=['asset'],
+                      )
 
 
 router.register(r'asset_snapshots', AssetSnapshotViewSet)
@@ -46,6 +54,7 @@ router.register(r'tags', TagViewSet)
 router.register(r'permissions', ObjectPermissionViewSet)
 router.register(r'reports', ReportsViewSet, base_name='reports')
 router.register(r'imports', ImportTaskViewSet)
+router.register(r'exports', ExportTaskViewSet)
 router.register(r'sitewide_messages', SitewideMessageViewSet)
 
 router.register(r'authorized_application/users',
@@ -85,6 +94,7 @@ urlpatterns = [
     url(r'^jsi18n/$', javascript_catalog, js_info_dict, name='javascript-catalog'),
     # url(r'^.*', home),
     url(r'^token/$', TokenView.as_view(), name='token'),
+    url(r'^private-media/', include(private_storage.urls)),
     # Statistics for superusers
     url(r'^superuser_stats/user_report/$',
         'kobo.apps.superuser_stats.views.user_report'),

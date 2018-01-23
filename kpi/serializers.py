@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 import json
 import pytz
@@ -8,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import get_script_prefix, resolve, Resolver404
 from django.db import transaction
+from django.db.utils import ProgrammingError
 from django.utils.six.moves.urllib import parse as urlparse
 from django.conf import settings
 from rest_framework import serializers, exceptions
@@ -24,7 +26,7 @@ from .models import AssetVersion
 from .models import Collection
 from .models import CollectionChildrenQuerySet
 from .models import UserCollectionSubscription
-from .models import ImportTask
+from .models import ImportTask, ExportTask
 from .models import ObjectPermission
 from .models.object_permission import get_anonymous_user, get_objects_for_user
 from .models.asset import ASSET_TYPES
@@ -420,6 +422,7 @@ class AssetSerializer(serializers.HyperlinkedModelSerializer):
     settings = WritableJSONField(required=False, allow_blank=True)
     content = WritableJSONField(required=False)
     report_styles = WritableJSONField(required=False)
+    report_custom = WritableJSONField(required=False)
     xls_link = serializers.SerializerMethodField()
     summary = serializers.ReadOnlyField()
     koboform_link = serializers.SerializerMethodField()
@@ -477,6 +480,7 @@ class AssetSerializer(serializers.HyperlinkedModelSerializer):
                   'deployment__data_download_links',
                   'deployment__submission_count',
                   'report_styles',
+                  'report_custom',
                   'content',
                   'downloads',
                   'embeds',
@@ -720,6 +724,42 @@ class ImportTaskListSerializer(ImportTaskSerializer):
         )
 
 
+class ExportTaskSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        lookup_field='uid',
+        view_name='exporttask-detail'
+    )
+    messages = ReadOnlyJSONField(required=False)
+    data = ReadOnlyJSONField()
+
+    class Meta:
+        model = ExportTask
+        fields = (
+            'url',
+            'status',
+            'messages',
+            'uid',
+            'date_created',
+            'last_submission_time',
+            'result',
+            'data',
+        )
+        extra_kwargs = {
+            'status': {
+                'read_only': True,
+            },
+            'uid': {
+                'read_only': True,
+            },
+            'last_submission_time': {
+                'read_only': True,
+            },
+            'result': {
+                'read_only': True,
+            },
+        }
+
+
 class AssetListSerializer(AssetSerializer):
     class Meta(AssetSerializer.Meta):
         fields = ('url',
@@ -858,6 +898,27 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         if settings.KOBOCAT_URL and settings.KOBOCAT_INTERNAL_URL:
             rep['extra_details']['require_auth'] = get_kc_profile_data(
                 obj.pk).get('require_auth', False)
+
+        # Count the number of dkobo SurveyDrafts to determine migration status
+        from kpi.management.commands.import_survey_drafts_from_dkobo import \
+            SurveyDraft
+        try:
+            SurveyDraft.objects.exists()
+        except ProgrammingError:
+            # dkobo is not installed. Freude, schöner Götterfunken
+            pass
+        else:
+            survey_drafts = SurveyDraft.objects.filter(user=obj)
+            rep['dkobo_survey_drafts'] = {
+                'total': survey_drafts.count(),
+                'non_migrated': survey_drafts.filter(kpi_asset_uid='').count(),
+                'migrate_url': u'{switch_builder}?beta=1&migrate=1'.format(
+                    switch_builder=reverse(
+                        'toggle-preferred-builder',
+                        request=self.context.get('request', None)
+                    )
+                )
+            }
         return rep
 
     def update(self, instance, validated_data):

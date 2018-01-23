@@ -371,19 +371,21 @@ class XlsExportable(object):
 
     def to_xls_io(self, versioned=False, **kwargs):
         ''' To append rows to one or more sheets, pass `append` as a
-        dictionary of dictionaries in the following format:
+        dictionary of lists of dictionaries in the following format:
             `{'sheet name': [{'column name': 'cell value'}]}`
         Extra settings may be included as a dictionary in the same
         parameter.
             `{'settings': {'setting name': 'setting value'}}` '''
         if versioned:
-            kwargs['append'
-                   ] = {'survey': [
-                        {'name': '__version__',
-                         'calculation': '\'{}\''.format(self.version_id),
-                         'type': 'calculate'}
-                        ],
-                        'settings': {'version': self.version_id}}
+            append = kwargs['append'] = kwargs.get('append', {})
+            append_survey = append['survey'] = append.get('survey', [])
+            append_settings = append['settings'] = append.get('settings', {})
+            append_survey.append(
+                {'name': '__version__',
+                 'calculation': '\'{}\''.format(self.version_id),
+                 'type': 'calculate'}
+            )
+            append_settings.update({'version': self.version_id})
         try:
             def _add_contents_to_sheet(sheet, contents):
                 cols = []
@@ -428,6 +430,7 @@ class Asset(ObjectPermissionMixin,
     content = JSONField(null=True)
     summary = JSONField(null=True, default=dict)
     report_styles = JSONBField(default=dict)
+    report_custom = JSONBField(default=dict)
     asset_type = models.CharField(
         choices=ASSET_TYPES, max_length=20, default='survey')
     parent = models.ForeignKey(
