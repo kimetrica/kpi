@@ -1,24 +1,22 @@
 import $ from 'jquery';
-import React from 'react/addons';
+import React from 'react';
+import PropTypes from 'prop-types'
+import reactMixin from 'react-mixin';
+import autoBind from 'react-autobind';
 import Reflux from 'reflux';
 import alertify from 'alertifyjs';
-
-import newFormMixin from '../editorMixins/newForm';
 import editableFormMixin from '../editorMixins/editableForm';
-import existingFormMixin from '../editorMixins/existingForm';
 import Select from 'react-select';
 import ui from '../ui';
 import bem from '../bem';
 import DocumentTitle from 'react-document-title';
+import TextareaAutosize from 'react-autosize-textarea';
 
-import {Navigation} from 'react-router';
 import {session} from '../stores';
 
 let newFormMixins = [
-    Navigation,
     Reflux.ListenerMixin,
-    editableFormMixin,
-    newFormMixin,
+    editableFormMixin
 ];
 import actions from '../actions';
 import {dataInterface} from '../dataInterface';
@@ -26,52 +24,56 @@ import {
   t,
   redirectTo,
   assign,
+  notify,
+  formatTime
 } from '../utils';
 
-var ProjectSettings = React.createClass({
-  mixins: [
-    Navigation,
-    Reflux.ListenerMixin,
-  ],
-  nameChange (evt) {
-    this.setState({
-      name: evt.target.value
-    });
-  },
-  descriptionChange (evt) {
-    this.setState({
-      description: evt.target.value
-    });
-  },
-  countryChange (val) {
-    this.setState({
-      country: val
-    });
-  },
-  sectorChange (val) {
-    this.setState({
-      sector: val
-    });
-  },
-  shareMetadataChange (evt) {
-    this.setState({
-      'share-metadata': evt.target.checked
-    });
-  },
-  getInitialState () {
+import {
+  update_states,
+} from '../constants';
+
+export class ProjectSettings extends React.Component {
+  constructor(props){
+    super(props);
     let state = {
       sessionLoaded: !!session.currentAccount,
       name: '',
       description: '',
       sector: '',
       country: '',
-      'share-metadata': false
+      'share-metadata': false,
     }
     if (this.props.initialData !== undefined) {
       assign(state, this.props.initialData);
     }
-    return state;
-  },
+    this.state = state;
+    autoBind(this);
+  }
+  nameChange (evt) {
+    this.setState({
+      name: evt.target.value
+    });
+  }
+  descriptionChange (evt) {
+    this.setState({
+      description: evt.target.value
+    });
+  }
+  countryChange (val) {
+    this.setState({
+      country: val
+    });
+  }
+  sectorChange (val) {
+    this.setState({
+      sector: val
+    });
+  }
+  shareMetadataChange (evt) {
+    this.setState({
+      'share-metadata': evt.target.checked
+    });
+  }
   componentDidMount () {
     this.listenTo(session, (session) => {
       this.setState({
@@ -79,7 +81,7 @@ var ProjectSettings = React.createClass({
       });
     });
 
-  },
+  }
   onSubmit (evt) {
     evt.preventDefault();
     if (!this.state.name.trim()) {
@@ -87,7 +89,7 @@ var ProjectSettings = React.createClass({
     } else {
       this.props.onSubmit(this);
     }
-  },
+  }
   render () {
     if (!this.state.sessionLoaded) {
       return (
@@ -116,32 +118,14 @@ var ProjectSettings = React.createClass({
 
     return (
       <bem.FormModal__form onSubmit={this.onSubmit}>
-        {this.props.context == 'existingForm' && 
-          <bem.FormModal__item m='actions'>
-          <button onClick={this.onSubmit} className="mdl-button mdl-js-button mdl-button--bordered">
+        {this.props.context == 'existingForm' &&
+          <bem.FormModal__item m={['actions', 'fixed']}>
+            <button onClick={this.onSubmit} className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
               {this.props.submitButtonValue}
             </button>
           </bem.FormModal__item>
         }
-
         <bem.FormModal__item m='wrapper'>
-          {this.props.context == 'existingForm' && 
-            <bem.FormModal__item m='sharing'>
-              <a href={this.makeHref('form-sharing', {assetid: this.state.assetid})} className="mdl-button mdl-js-button mdl-button--bordered mdl-button--gray-border">
-                {t('Share')}
-              </a>
-              <label>{t('Sharing Permissions')}</label>
-              <label className="long">
-                {t('Allow others to access your project.')}
-              </label>
-              {sharedWith.length > 0 &&
-                t('Shared with ')
-              }
-              {sharedWith.map((user)=> {
-                return (<span className="shared-with">{user}</span>);
-              })}
-            </bem.FormModal__item>
-          }
           <bem.FormModal__item>
             <label htmlFor="name">
               {t('Project Name')}
@@ -157,72 +141,39 @@ var ProjectSettings = React.createClass({
             <label htmlFor="description">
               {t('Description')}
             </label>
-            <textarea type="text"
-                id="description"
-                placeholder={t('Enter short description here')}
-                value={this.state.description}
-                onChange={this.descriptionChange}
-              />
+            <TextareaAutosize
+              onChange={this.descriptionChange}
+              value={this.state.description}
+              placeholder={t('Enter short description here')} />
           </bem.FormModal__item>
 
-          {this.props.context == 'existingForm' && this.props.iframeUrl &&
-            <iframe src={this.props.iframeUrl} className="kc-settings-iframe" />
-          }
-          {this.props.context == 'newForm' &&
+          {this.props.context != 'existingForm' &&
             <bem.FormModal__item m='actions'>
-            <button onClick={this.onSubmit} className="mdl-button mdl-js-button mdl-button--bordered">
+              <button onClick={this.onSubmit} className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
                 {this.props.submitButtonValue}
               </button>
             </bem.FormModal__item>
           }
+
+          {this.props.context == 'existingForm' && this.props.iframeUrl &&
+            <bem.FormView__cell m='iframe'>
+              <iframe src={this.props.iframeUrl} />
+            </bem.FormView__cell>
+
+          }
         </bem.FormModal__item>
       </bem.FormModal__form>
     );
-  },
-});
+  }
+};
 
-export var NewForm = React.createClass({
-  mixins: [
-    Navigation,
-  ],
-  createAsset (settingsComponent) {
-    dataInterface.createResource({
-      name: settingsComponent.state.name,
-      settings: JSON.stringify({
-        description: settingsComponent.state.description,
-        sector: settingsComponent.state.sector,
-        country: settingsComponent.state.country,
-        'share-metadata': settingsComponent.state['share-metadata']
-      }),
-      asset_type: 'survey',
-    }).done((asset) => {
-      var isNewForm = false;
-      if (isNewForm) {
-        this.transitionTo('form-landing', {assetid: asset.uid})
-      } else {
-        this.transitionTo('form-edit', {assetid: asset.uid})
-      }
-    });
-  },
-  routeBack () {
-    this.transitionTo('forms');
-  },
-  render () {
-    return (
-      <ui.Modal open onClose={this.routeBack} title={t('Create New Project from Scratch')}>
-        <ui.Modal.Body>
-          <ProjectSettings
-            onSubmit={this.createAsset}
-            submitButtonValue={t('Create project')}
-            context='newForm'
-          />
-        </ui.Modal.Body>
-      </ui.Modal>
-    );
-  },
-});
+reactMixin(ProjectSettings.prototype, Reflux.ListenerMixin);
 
-export var ProjectSettingsEditor = React.createClass({
+export class ProjectSettingsEditor extends React.Component {
+  constructor(props){
+    super(props);
+    autoBind(this);
+  }
   updateAsset (settingsComponent) {
     actions.resources.updateAsset(
       this.props.asset.uid,
@@ -236,7 +187,7 @@ export var ProjectSettingsEditor = React.createClass({
         }),
       }
     );
-  },
+  }
   render () {
     let initialData = {
       name: this.props.asset.name,
@@ -245,27 +196,32 @@ export var ProjectSettingsEditor = React.createClass({
       assetid: this.props.asset.uid
     };
     assign(initialData, this.props.asset.settings);
+
     return (
       <ProjectSettings
         onSubmit={this.updateAsset}
         submitButtonValue={t('Save Changes')}
         initialData={initialData}
-        iframeUrl={this.props.iframeUrl}
         context='existingForm'
+        iframeUrl={this.props.iframeUrl}
       />
     );
-  },
-});
+  }
+};
 
-export var ProjectDownloads = React.createClass({
-  getInitialState () {
-    return {
+export class ProjectDownloads extends React.Component {
+  constructor(props){
+    super(props);
+    this.state = {
       type: 'xls',
       lang: '_default',
       hierInLabels: false,
       groupSep: '/',
+      exports: false
     };
-  },
+
+    autoBind(this);
+  }
   handleChange (e, attr) {
     if (e.target) {
       if (e.target.type == 'checkbox') {
@@ -278,11 +234,11 @@ export var ProjectDownloads = React.createClass({
       var val = e;
     }
     this.setState({[attr]: val});
-  },
-  typeChange (e) {this.handleChange(e, 'type');},
-  langChange (e) {this.handleChange(e, 'lang');},
-  hierInLabelsChange (e) {this.handleChange(e, 'hierInLabels');},
-  groupSepChange (e) {this.handleChange(e, 'groupSep');},
+  }
+  typeChange (e) {this.handleChange(e, 'type');}
+  langChange (e) {this.handleChange(e, 'lang');}
+  hierInLabelsChange (e) {this.handleChange(e, 'hierInLabels');}
+  groupSepChange (e) {this.handleChange(e, 'groupSep');}
   handleSubmit (e) {
     e.preventDefault();
 
@@ -291,117 +247,303 @@ export var ProjectDownloads = React.createClass({
         this.state.type
       ];
       if (this.state.type == 'xls' || this.state.type == 'csv') {
-        let params = $.param({
+        url = `/exports/`; // TODO: have the backend pass the URL in the asset
+        let postData = {
+          source: this.props.asset.url,
+          type: this.state.type,
           lang: this.state.lang,
           hierarchy_in_labels: this.state.hierInLabels,
           group_sep: this.state.groupSep,
+        };
+        $.ajax({
+          method: 'POST',
+          url: url,
+          data: postData
+        }).done((data) => {
+          $.ajax({url: data.url}).then((taskData) => {
+            this.checkForFastExport(data.url);
+            this.getExports();
+          }).fail((taskFail) => {
+            alertify.error(t('Failed to retrieve the export task.'));
+            log('export task retrieval failed', taskFail);
+          });
+        }).fail((failData) => {
+          alertify.error(t('Failed to create the export.'));
+          log('export creation failed', failData);
         });
-        redirectTo(`${url}?${params}`);
       } else {
         redirectTo(url);
       }
     }
-  },
+  }
+
+  componentDidMount() {
+    let translations = this.props.asset.content.translations;
+    if (translations.length > 1) {
+      this.setState({lang: translations[0]});
+    }
+    this.getExports();
+  }
+
+  componentWillUnmount() {
+     clearInterval(this.pollingInterval);
+  }
+
+  refreshExport(url) {
+    $.ajax({url: url}).then((taskData) => {
+      if (taskData.status !== 'created' && taskData.status !== 'processing') {
+        this.getExports();
+      }
+    });
+  }
+
+  checkForFastExport(exportUrl) {
+    // Save the user some time and an extra click if their export completes
+    // very quickly
+    const maxChecks = 3;
+    const checkDelay = 500;
+
+    let checksDone = 0;
+    let checkInterval;
+    let checkFunc = () => {
+      $.ajax({url: exportUrl}).then((data) => {
+        if(++checksDone >= maxChecks || (data.status !== 'created' &&
+                                         data.status !== 'processing'))
+        {
+          clearInterval(checkInterval);
+          if(data.status === 'complete') {
+            redirectTo(data.result);
+          }
+        }
+      });
+    };
+    checkInterval = setInterval(checkFunc, checkDelay);
+  }
+
+  getExports() {
+    clearInterval(this.pollingInterval);
+
+    dataInterface.getAssetExports(this.props.asset.uid).done((data)=>{
+      if (data.count > 0) {
+        this.setState({exports: data.results.reverse()});
+
+        // Start a polling Interval if there is at least one export is not yet complete
+        data.results.every((item) => {
+          if(item.status === 'created' || item.status === 'processing'){
+            this.pollingInterval = setInterval(this.refreshExport, 4000, item.url);
+            return false;
+          } else {
+            return true;
+          }
+        });
+      } else {
+        this.setState({exports: false});
+      }
+    });
+  }
+
   render () {
     let translations = this.props.asset.content.translations;
     var docTitle = this.props.asset.name || t('Untitled');
 
     return (
       <DocumentTitle title={`${docTitle} | KoboToolbox`}>
-      <bem.FormView>
-        <bem.FormView__cell>
-          <bem.FormModal__form onSubmit={this.handleSubmit}>
-            {[
-              <bem.FormModal__item>
-                <label htmlFor="type">{t('Select export type')}</label>
-                <select name="type" value={this.state.type}
-                    onChange={this.typeChange}>
-                  <option value="xls">{t('XLS')}</option>
-                  <option value="xls_legacy">{t('XLS (legacy)')}</option>
-                  <option value="csv">{t('CSV')}</option>
-                  <option value="csv_legacy">{t('CSV (legacy)')}</option>
-                  <option value="zip_legacy">{t('Media Attachments (ZIP)')}</option>
-                  <option value="kml_legacy">{t('GPS coordinates (KML)')}</option>
-                  <option value="analyser_legacy">{t('Excel Analyser')}</option>
-                  <option value="spss_labels">{t('SPSS Labels')}</option>
-                </select>
-              </bem.FormModal__item>
-            , this.state.type == 'xls' || this.state.type == 'csv' ? [
-                <bem.FormModal__item>
-                  <label htmlFor="lang">{t('Value and header format')}</label>
-                  <select name="lang" value={this.state.lang}
-                      onChange={this.langChange}>
-                    <option value="xml">{t('XML values and headers')}</option>
-                    <option value="_default">{t('Labels')}</option>
-                    {
-                      translations && translations.map((t) => {
-                        if (t) {
-                          return <option value={t}>{t}</option>;
-                        }
-                      })
-                    }
-                  </select>
-                </bem.FormModal__item>,
-                <bem.FormModal__item>
-                  <label htmlFor="hierarchy_in_labels">
-                    {t('Include groups in headers')}
-                  </label>
-                  <input type="checkbox" name="hierarchy_in_labels"
-                    value={this.state.hierInLabels}
-                    onChange={this.hierInLabelsChange}
-                  />
-                </bem.FormModal__item>,
-                this.state.hierInLabels ?
-                  <bem.FormModal__item>
-                    <label htmlFor="group_sep">{t('Group separator')}</label>
-                    <input type="text" name="group_sep"
-                      value={this.state.groupSep}
-                      onChange={this.groupSepChange}
-                    />
-                  </bem.FormModal__item>
-                : null
-              ] : null
-            , this.state.type.indexOf('_legacy') > 0 ?
-              <bem.FormModal__item m='downloads'>
-                <iframe src={
-                    this.props.asset.deployment__data_download_links[
-                      this.state.type]
-                }>
-                </iframe>
-              </bem.FormModal__item>
-            :
-              <bem.FormModal__item>
-                <input type="submit" 
-                       value={t('Download')} 
-                       className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored"/>
-              </bem.FormModal__item>
-            ]}
-          </bem.FormModal__form>
-        </bem.FormView__cell>
-      </bem.FormView>
+        <bem.FormView m='form-data-downloads'>
+          <bem.FormView__row>
+              <bem.FormView__cell m='label'>
+                {t('Download Data')}
+              </bem.FormView__cell>
+              <bem.FormView__cell m={['box', 'padding']}>
+                <bem.FormModal__form onSubmit={this.handleSubmit}>
+                  {[
+                    <bem.FormModal__item key={'t'}>
+                      <label htmlFor="type">{t('Select export type')}</label>
+                      <select name="type" value={this.state.type}
+                          onChange={this.typeChange}>
+                        <option value="xls">{t('XLS')}</option>
+                        <option value="xls_legacy">{t('XLS (legacy)')}</option>
+                        <option value="csv">{t('CSV')}</option>
+                        <option value="csv_legacy">{t('CSV (legacy)')}</option>
+                        <option value="zip_legacy">{t('Media Attachments (ZIP)')}</option>
+                        <option value="kml_legacy">{t('GPS coordinates (KML)')}</option>
+                        <option value="analyser_legacy">{t('Excel Analyser')}</option>
+                        <option value="spss_labels">{t('SPSS Labels')}</option>
+                      </select>
+                    </bem.FormModal__item>
+                  , this.state.type == 'xls' || this.state.type == 'csv' ? [
+                      <bem.FormModal__item key={'x'}>
+                        <label htmlFor="lang">{t('Value and header format')}</label>
+                        <select name="lang" value={this.state.lang}
+                            onChange={this.langChange}>
+                          <option value="xml">{t('XML values and headers')}</option>
+                          { translations.length < 2 &&
+                            <option value="_default">{t('Labels')}</option>
+                          }
+                          {
+                            translations && translations.map((t, i) => {
+                              if (t) {
+                                return <option value={t} key={i}>{t}</option>;
+                              }
+                            })
+                          }
+                        </select>
+                      </bem.FormModal__item>,
+                      <bem.FormModal__item key={'h'}>
+                        <input type="checkbox" id="hierarchy_in_labels"
+                          value={this.state.hierInLabels}
+                          onChange={this.hierInLabelsChange}
+                        />
+                        <label htmlFor="hierarchy_in_labels">
+                          {t('Include groups in headers')}
+                        </label>
+                      </bem.FormModal__item>,
+                      this.state.hierInLabels ?
+                        <bem.FormModal__item key={'g'}>
+                          <label htmlFor="group_sep">{t('Group separator')}</label>
+                          <input type="text" name="group_sep"
+                            value={this.state.groupSep}
+                            onChange={this.groupSepChange}
+                          />
+                        </bem.FormModal__item>
+                      : null
+                    ] : null
+                  , this.state.type.indexOf('_legacy') > 0 ?
+                    <bem.FormModal__item m='downloads' key={'d'}>
+                      <iframe src={
+                          this.props.asset.deployment__data_download_links[
+                            this.state.type]
+                      }>
+                      </iframe>
+                    </bem.FormModal__item>
+                  :
+                    <bem.FormModal__item key={'s'}>
+              <input type="submit"
+                             value={t('Export')} 
+                             className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored"/>
+                    </bem.FormModal__item>
+                  ]}
+                </bem.FormModal__form>
+              </bem.FormView__cell>
+          </bem.FormView__row>
+          {this.state.exports && 
+            <bem.FormView__row>
+                <bem.FormView__cell m='label'>
+                  {t('Previous Exports')}
+                </bem.FormView__cell>
+                <bem.FormView__cell m={['box', 'exports-table']}>
+                  <bem.FormView__group m={['items', 'headings']}>
+                    <bem.FormView__label m='type'>{t('Type')}</bem.FormView__label>
+                    <bem.FormView__label m='date'>{t('Created')}</bem.FormView__label>
+                    <bem.FormView__label m='lang'>{t('Language')}</bem.FormView__label>
+                    <bem.FormView__label m='include-groups'>{t('Include Groups')}</bem.FormView__label>
+                    <bem.FormView__label></bem.FormView__label>
+                  </bem.FormView__group>
+                  {this.state.exports.map((item, n) => {
+                    return (
+                      <bem.FormView__group m="items" key={n} >
+                        <bem.FormView__label m='type'>
+                          {item.data.type}
+                        </bem.FormView__label>
+                        <bem.FormView__label m='date'>
+                          {formatTime(item.date_created)}
+                        </bem.FormView__label>
+                        <bem.FormView__label m='lang'>
+                        {item.data.lang === "_default" ? t('Default') : item.data.lang}
+                        </bem.FormView__label>
+                        <bem.FormView__label m='include-groups'>
+                          {item.data.hierarchy_in_labels === "false" ? t('No') : t("Yes")}
+                        </bem.FormView__label>
+                        <bem.FormView__label m='action'>
+                          {item.status == 'complete' &&
+                            <a className="form-view__link" href={item.result} data-tip={t('Download')}>
+                              <i className="k-icon-download" />
+                            </a>
+                          }
+                          {item.status == 'error' &&
+                            <span data-tip={item.messages.error}>
+                              {t('Export Failed')}
+                            </span>
+                          }
+                          {item.status != 'error' && item.status != 'complete' &&
+                            <span>{t('processing...')}</span>
+                          }
+                        </bem.FormView__label>
+                      </bem.FormView__group>
+                    );
+                  })}
+                </bem.FormView__cell>
+            </bem.FormView__row>
+          }
+        </bem.FormView>
       </DocumentTitle>
     );
-  },
-});
+  }
+};
 
-export var AddToLibrary = React.createClass({
-  mixins: newFormMixins,
-  listRoute: 'library',
+export class AddToLibrary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      asset_updated: update_states.UP_TO_DATE,
+      multioptionsExpanded: true,
+      surveyAppRendered: false,
+      name: '',
+      kind: 'asset',
+      asset: false,
+      editorState: 'new',
+      backRoute: '/library'
+    };
+    autoBind(this);
+  }
+}
+
+newFormMixins.forEach(function(mixin) {
+  reactMixin(AddToLibrary.prototype, mixin);
 });
 
 let existingFormMixins = [
-    Navigation,
     Reflux.ListenerMixin,
-    editableFormMixin,
-    existingFormMixin,
+    editableFormMixin
 ];
 
-export var FormPage = React.createClass({
-  mixins: existingFormMixins,
-  listRoute: 'forms',
+let contextTypes = {
+  router: PropTypes.object
+};
+
+export class FormPage extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      asset_updated: update_states.UP_TO_DATE,
+      multioptionsExpanded: true,
+      surveyAppRendered: false,
+      name: '',
+      editorState: 'existing',
+      backRoute: '/forms'
+    };
+    autoBind(this);
+  }
+}
+
+export class LibraryPage extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      asset_updated: update_states.UP_TO_DATE,
+      multioptionsExpanded: true,
+      surveyAppRendered: false,
+      name: '',
+      editorState: 'existing',
+      backRoute: '/library'
+    };
+    autoBind(this);
+  }
+}
+
+existingFormMixins.forEach(function(mixin) {
+  reactMixin(FormPage.prototype, mixin);
+  reactMixin(LibraryPage.prototype, mixin);
 });
 
-export var LibraryPage = React.createClass({
-  mixins: existingFormMixins,
-  listRoute: 'library',
-});
+FormPage.contextTypes = contextTypes;
+LibraryPage.contextTypes = contextTypes;

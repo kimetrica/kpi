@@ -76,7 +76,7 @@ module.exports = function (options) {
     {
       test: /\.(js|jsx|es6)$/,
       exclude: /(node_modules|bower_components)/,
-      loader: 'react-hot-loader!babel-loader'
+      loader: 'react-hot-loader/webpack!babel-loader'
     },
     { // for third-party minified scripts, don't process require()
       test: /\.min\.js$/,
@@ -99,41 +99,21 @@ module.exports = function (options) {
         ) : scssLoader.join('!')
     },
     {
-      test: /\.sass$/,
-      loader: 'style-loader!css-loader!postcss-loader!sass-loader?indentedSyntax=sass'
-    },
-    {
-      test: /\.less$/,
-      loader: 'style-loader!css-loader!postcss-loader!less-loader'
-    },
-    {
       test: /\.coffee$/,
       loader: "coffee-loader",
     },
     { test: /\.(coffee\.md|litcoffee)$/,
       loader: "coffee-loader?literate"
+    },
+    {
+      test: /\.(png|jpg|gif)$/,
+      loader: 'file-loader?name=[name].[ext]'
+    },
+    {
+      test: /\.(ttf|eot|svg|woff(2)?)(\S+)?$/,
+      loader: 'file-loader?name=[name].[ext]'
     }
   ];
-
-  if (options.outputHash) {
-    loaders.push({
-      test: /\.(png|jpg|gif)$/,
-      loader: 'file-loader?name=[hash].[ext]'
-    });
-    loaders.push({
-      test: /\.(ttf|eot|svg|woff(2)?)(\S+)?$/,
-      loader: 'file-loader?name=[hash].[ext]'
-    });
-  } else {
-    loaders.push({
-      test: /\.(png|jpg|gif)$/,
-      loader: 'file-loader?name=[name].[ext]'
-    });
-    loaders.push({
-      test: /\.(ttf|eot|svg|woff(2)?)(\S+)?$/,
-      loader: 'file-loader?name=[name].[ext]'
-    });
-  }
 
   var plugins = [
     new webpack.NoErrorsPlugin(),
@@ -189,6 +169,7 @@ module.exports = function (options) {
   var config = {
     entry: Object.keys(entry).reduce(function (result, key) {
       result[key] = options.hot ? [
+        'react-hot-loader/patch',
         'webpack-dev-server/client?http://localhost:3000/',
         'webpack/hot/only-dev-server',
         entry[key]
@@ -204,6 +185,7 @@ module.exports = function (options) {
       extensions: ['', '.jsx', '.js', '.es6', '.coffee'],
       alias: {
         app: path.join(__dirname, '../app'),
+        js: path.join(__dirname, '../jsapp/js'),
         utils: path.join(__dirname, '../jsapp/js/utils'),
         test: path.join(__dirname, '../test'),
       }

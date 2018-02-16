@@ -1,14 +1,20 @@
-import json
+# -*- coding: utf-8 -*-
 
+import json
+import requests
+
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from lxml import etree
 from rest_framework import status
 from rest_framework.test import APITestCase
+from private_storage.storage.files import PrivateFileSystemStorage
 
 from kpi.models import Asset
 from kpi.models import AssetVersion
 from kpi.models import Collection
+from kpi.models import ExportTask
 from .kpi_test_case import KpiTestCase
 from formpack.utils.expand_content import SCHEMA_VERSION
 
@@ -19,11 +25,11 @@ class AssetsListApiTests(APITestCase):
     fixtures = ['test_data']
 
     def setUp(self):
-        self.client.login(username='admin', password='pass')
+        self.client.login(username='someuser', password='someuser')
 
     def test_login_as_other_users(self):
         self.client.logout()
-        self.client.login(username='someuser', password='someuser')
+        self.client.login(username='admin', password='pass')
         self.client.logout()
         self.client.login(username='anotheruser', password='anotheruser')
         self.client.logout()
@@ -58,7 +64,7 @@ class AssetVersionApiTests(APITestCase):
     fixtures = ['test_data']
 
     def setUp(self):
-        self.client.login(username='admin', password='pass')
+        self.client.login(username='someuser', password='someuser')
         self.asset = Asset.objects.first()
         self.asset.save()
         self.version = self.asset.asset_versions.first()
@@ -78,7 +84,7 @@ class AssetVersionApiTests(APITestCase):
 
     def test_restricted_access_to_version(self):
         self.client.logout()
-        self.client.login(username='someuser', password='someuser')
+        self.client.login(username='anotheruser', password='anotheruser')
         resp = self.client.get(self.version_list_url, format='json')
         self.assertEqual(resp.data['count'], 0)
         _version_detail_url = reverse('asset-version-detail',
@@ -92,7 +98,7 @@ class AssetsDetailApiTests(APITestCase):
     fixtures = ['test_data']
 
     def setUp(self):
-        self.client.login(username='admin', password='pass')
+        self.client.login(username='someuser', password='someuser')
         url = reverse('asset-list')
         data = {'content': '{}', 'asset_type': 'survey'}
         self.r = self.client.post(url, data, format='json')
@@ -170,6 +176,46 @@ class AssetsDetailApiTests(APITestCase):
         self.assertEqual(new_asset.content['survey'][0]['label'], ['v2'])
         self.assertEqual(new_asset.content['translations'], [None])
 
+    def test_deployed_version_pagination(self):
+        PAGE_LENGTH = 100
+        version = self.asset.latest_version
+        preexisting_count = self.asset.deployed_versions.count()
+        version.deployed = True
+        for i in range(PAGE_LENGTH + 11):
+            version.uid = ''
+            version.pk = None
+            version.save()
+        self.assertEqual(
+            preexisting_count + PAGE_LENGTH + 11,
+            self.asset.deployed_versions.count()
+        )
+        response = self.client.get(self.asset_url, format='json')
+        self.assertEqual(
+            response.data['deployed_versions']['count'],
+            self.asset.deployed_versions.count()
+        )
+        self.assertEqual(
+            len(response.data['deployed_versions']['results']),
+            PAGE_LENGTH
+        )
+
+    def test_report_custom_field(self):
+        # Check the default value
+        response = self.client.get(self.asset_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['report_custom'], {})
+        # Update
+        test_data = {'some_report': 'my insightful report'}
+        response = self.client.patch(
+            self.asset_url, format='json',
+            data={'report_custom': json.dumps(test_data)}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify
+        response = self.client.get(self.asset_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['report_custom'], test_data)
+
 
 class AssetsXmlExportApiTests(KpiTestCase):
     fixtures = ['test_data']
@@ -243,8 +289,8 @@ class ObjectRelationshipsTests(APITestCase):
     fixtures = ['test_data']
 
     def setUp(self):
-        self.client.login(username='admin', password='pass')
-        self.user = User.objects.get(id=1)
+        self.client.login(username='someuser', password='someuser')
+        self.user = User.objects.get(username='someuser')
         self.surv = Asset.objects.create(content={'survey': [{"type": "text", "name": "q1"}]},
                                          owner=self.user,
                                          asset_type='survey')
@@ -356,3 +402,88 @@ class AssetsSettingsFieldTest(KpiTestCase):
         self.assert_object_in_object_list(asset)
         # Note: This is not an API method, but an ORM one.
         self.assertFalse(Asset.objects.filter(settings__id_string='titled_asset'))
+
+
+class AssetExportTaskTest(APITestCase):
+    fixtures = ['test_data']
+
+    def setUp(self):
+        self.client.login(username='someuser', password='someuser')
+        self.user = User.objects.get(username='someuser')
+        self.asset = Asset.objects.create(
+            content={'survey': [{"type": "text", "name": "q1"}]},
+            owner=self.user,
+            asset_type='survey',
+            name=u'тєѕт αѕѕєт'
+        )
+        self.asset.deploy(backend='mock', active=True)
+        self.asset.save()
+        v_uid = self.asset.latest_deployed_version.uid
+        submission = {
+            '__version__': v_uid,
+            'q1': u'¿Qué tal?'
+        }
+        self.asset.deployment._mock_submission(submission)
+        self.asset.save(create_version=False)
+        settings.CELERY_ALWAYS_EAGER = True
+
+    def result_stored_locally(self, detail_response):
+        '''
+        Return `True` if the result is stored locally, or `False` if it's
+        housed externally (e.g. on Amazon S3)
+        '''
+        export_task = ExportTask.objects.get(uid=detail_response.data['uid'])
+        return isinstance(export_task.result.storage, PrivateFileSystemStorage)
+
+    def test_owner_can_create_export(self):
+        post_url = reverse('exporttask-list')
+        asset_url = reverse('asset-detail', args=[self.asset.uid])
+        task_data = {
+            'source': asset_url,
+            'type': 'csv',
+        }
+        # Create the export task
+        response = self.client.post(post_url, task_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Task should complete right away due to `CELERY_ALWAYS_EAGER`
+        detail_response = self.client.get(response.data['url'])
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.data['status'], 'complete')
+        self.assertEqual(detail_response.data['messages'], {})
+        # Get the result file
+        if self.result_stored_locally(detail_response):
+            result_response = self.client.get(detail_response.data['result'])
+            result_content = ''.join(result_response.streaming_content)
+        else:
+            result_response = requests.get(detail_response.data['result'])
+            result_content = result_response.content
+        self.assertEqual(result_response.status_code, status.HTTP_200_OK)
+        expected_content = ''.join([
+            '"q1";"_id";"_uuid";"_submission_time";"_index"\r\n',
+            '"¿Qué tal?";"";"";"";"1"\r\n',
+        ])
+        self.assertEqual(result_content, expected_content)
+        return detail_response
+
+    def test_other_user_cannot_access_export(self):
+        detail_response = self.test_owner_can_create_export()
+        self.client.logout()
+        self.client.login(username='otheruser', password='otheruser')
+        response = self.client.get(detail_response.data['url'])
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        if self.result_stored_locally(detail_response):
+            # This check only makes sense for locally-stored results, since S3
+            # uses query parameters in the URL for access control
+            response = self.client.get(detail_response.data['result'])
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_anon_cannot_access_export(self):
+        detail_response = self.test_owner_can_create_export()
+        self.client.logout()
+        response = self.client.get(detail_response.data['url'])
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        if self.result_stored_locally(detail_response):
+            # This check only makes sense for locally-stored results, since S3
+            # uses query parameters in the URL for access control
+            response = self.client.get(detail_response.data['result'])
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

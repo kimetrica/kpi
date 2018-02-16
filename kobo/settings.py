@@ -74,6 +74,7 @@ INSTALLED_APPS = (
     'debug_toolbar',
     'mptt',
     'haystack',
+    'private_storage',
     'kobo.apps.KpiConfig',
     'hub',
     'loginas',
@@ -86,7 +87,10 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'oauth2_provider',
     'markitup',
-    'django_digest'
+    'django_digest',
+    'kobo.apps.superuser_stats',
+    'kobo.apps.service_health',
+    'guardian', # For access to KC permissions ONLY
 )
 
 MIDDLEWARE_CLASSES = (
@@ -180,12 +184,21 @@ USE_TZ = True
 
 CAN_LOGIN_AS = lambda request, target_user: request.user.is_superuser
 
+# REMOVE the oldest if a user exceeds this many exports for a particular form
+MAXIMUM_EXPORTS_PER_USER_PER_FORM = 10
+
+# Private media file configuration
+PRIVATE_STORAGE_ROOT = os.path.join(BASE_DIR, 'media')
+PRIVATE_STORAGE_AUTH_FUNCTION = \
+    'kpi.utils.private_storage.superuser_or_username_matches_prefix'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.7/howto/static-files/
 
-STATIC_ROOT = 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/' + os.environ.get('KPI_MEDIA_URL', 'media').strip('/') + '/'
 
 # Following the uWSGI mountpoint convention, this should have a leading slash
 # but no trailing slash
@@ -198,6 +211,7 @@ else:
 # KPI_PREFIX should be set in the environment when running in a subdirectory
 if KPI_PREFIX and KPI_PREFIX != '/':
     STATIC_URL = KPI_PREFIX + '/' + STATIC_URL.lstrip('/')
+    MEDIA_URL = KPI_PREFIX + '/' + MEDIA_URL.lstrip('/')
     LOGIN_URL = KPI_PREFIX + '/' + LOGIN_URL.lstrip('/')
     LOGIN_REDIRECT_URL = KPI_PREFIX + '/' + LOGIN_REDIRECT_URL.lstrip('/')
 
@@ -330,15 +344,19 @@ CELERYBEAT_SCHEDULE = {
 }
 
 if 'KOBOCAT_URL' in os.environ:
-    # Create/update KPI assets to match KC forms
-    SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES = int(os.environ.get('SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES',
-                                                            '30'))
-    CELERYBEAT_SCHEDULE['sync-kobocat-xforms'] = {
-        'task': 'kpi.tasks.sync_kobocat_xforms',
-        'schedule': timedelta(minutes=SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES),
-        'options': {'queue': 'sync_kobocat_xforms_queue',
-                    'expires': SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES /2. * 60},
-    }
+    SYNC_KOBOCAT_XFORMS = (os.environ.get('SYNC_KOBOCAT_XFORMS', 'True') == 'True')
+    SYNC_KOBOCAT_PERMISSIONS = (
+        os.environ.get('SYNC_KOBOCAT_PERMISSIONS', 'True') == 'True')
+    if SYNC_KOBOCAT_XFORMS:
+        # Create/update KPI assets to match KC forms
+        SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES = int(
+            os.environ.get('SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES', '30'))
+        CELERYBEAT_SCHEDULE['sync-kobocat-xforms'] = {
+            'task': 'kpi.tasks.sync_kobocat_xforms',
+            'schedule': timedelta(minutes=SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES),
+            'options': {'queue': 'sync_kobocat_xforms_queue',
+                        'expires': SYNC_KOBOCAT_XFORMS_PERIOD_MINUTES /2. * 60},
+        }
 
 '''
 Distinct projects using Celery need their own queues. Example commands for
@@ -390,7 +408,7 @@ if os.environ.get('DEFAULT_FROM_EMAIL'):
     DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
     SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
-KOBO_SUPPORT_URL = os.environ.get('KOBO_SUPPORT_URL', 'http://support.kobotoolbox.org/')
+KOBO_SUPPORT_URL = os.environ.get('KOBO_SUPPORT_URL', 'http://help.kobotoolbox.org/')
 KOBO_SUPPORT_EMAIL = os.environ.get('KOBO_SUPPORT_EMAIL') or os.environ.get('DEFAULT_FROM_EMAIL', 'support@kobotoolbox.org')
 
 if os.environ.get('AWS_ACCESS_KEY_ID'):
@@ -399,8 +417,19 @@ if os.environ.get('AWS_ACCESS_KEY_ID'):
     AWS_SES_REGION_NAME = os.environ.get('AWS_SES_REGION_NAME')
     AWS_SES_REGION_ENDPOINT = os.environ.get('AWS_SES_REGION_ENDPOINT')
 
+if 'KPI_DEFAULT_FILE_STORAGE' in os.environ:
+    # To use S3 storage, set this to `storages.backends.s3boto.S3BotoStorage`
+    DEFAULT_FILE_STORAGE = os.environ.get('KPI_DEFAULT_FILE_STORAGE')
+    if 'KPI_AWS_STORAGE_BUCKET_NAME' in os.environ:
+        AWS_STORAGE_BUCKET_NAME = os.environ.get('KPI_AWS_STORAGE_BUCKET_NAME')
+        AWS_DEFAULT_ACL = 'private'
+        # django-private-storage needs its own S3 configuration
+        PRIVATE_STORAGE_CLASS = \
+            'private_storage.storage.s3boto3.PrivateS3BotoStorage'
+        AWS_PRIVATE_STORAGE_BUCKET_NAME = AWS_STORAGE_BUCKET_NAME
+
 ''' Sentry configuration '''
-if 'RAVEN_DSN' in os.environ:
+if os.environ.get('RAVEN_DSN', False):
     import raven
     INSTALLED_APPS = INSTALLED_APPS + (
         'raven.contrib.django.raven_compat',
