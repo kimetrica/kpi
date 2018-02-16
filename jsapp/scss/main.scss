@@ -44,9 +44,5 @@ body.hide-edge .is-edge {
 // Print stylesheet
 @import "./libs/print";
 
-// DWNP Overrides
-
-// Hide the external links
-.k-drawer__icons-bottom {
-  visibility: hidden;
-}
+// CSS Overrides
+@import "./custom-overrides";

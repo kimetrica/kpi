@@ -1,0 +1,44 @@
+// DWNP Overrides
+
+// Match Bootswatch Paperwhite theme
+body {
+    background-color: #fff;
+}
+
+// Hide the external links
+.k-drawer__icons-bottom {
+  visibility: hidden;
+}
+
+// Replace the logo
+.mdl-layout__header .header__logo {
+    background-image: url("../img/dwnp.jpg");
+    width: 275px;
+}
+.mdl-layout__header .header__logo::after {
+    content: 'DWNP Forms';
+    font-size: 24px;
+    color: $layout-nav-color;
+    padding-left: 50px;
+    position: absolute;
+    top: 8px;
+}
+
+// Adjust the height of the header bar to match Mayan
+.k-header__bar {
+  min-height: 55px;
+}
+.mdl-layout__header .mdl-layout__header-row {
+    height: 53px;
+}
+
+.form-sidebar {
+  &__label, &__grouping {
+    color: $charcoal;
+  }
+}
+
+// Don't show the git details at the bottom of the left-hand context pane
+.git-rev {
+   visibility: hidden;
+}
