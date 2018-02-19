@@ -152,8 +152,13 @@
       margin: 20px;
       padding: 15px;
       font-size: 13px;
-      display: inline-block;
+      display: block;
       background: white;
+      width: 80%;
+      max-height: 300px;
+      overflow: auto;
+      word-wrap: break-word;
+      text-align: left;
     }
   }
 
@@ -326,6 +331,10 @@
   width: 100%;
 }
 
+.popover-menu--bulkUpdate-menu .popover-menu__toggle {
+  @extend .mdl-button, .mdl-button--colored;
+}
+
 .popover-menu--question-language {
   .popover-menu__toggle {
     @extend .mdl-button;
@@ -342,7 +351,7 @@
   }
 }
 
-.popover-menu--groupby-menu {
+.popover-menu--custom-reports {
   .popover-menu__toggle {
     @extend .mdl-button;
 
@@ -394,17 +403,19 @@
   }
 
   .popover-menu__content {
-    min-width: 520px;
-    max-width: 660px;
+    min-width: 550px;
+    max-width: 780px;
     top: auto;
-    bottom: -100px;
+    bottom: -150px;
     right: auto;
-    left: 10px;
+    left: 30px;
+    max-height: 400px;
+    overflow: auto;
 
     .popover-menu__link {
       max-width: 100%;
       white-space: normal;
-      padding: 16px;
+      padding: 12px;
       border-bottom: 1px solid $divider-color;
       border-left: 2px solid transparent;
 
@@ -418,7 +429,8 @@
       }
 
       .collect-data-desc {
-        font-size: 13px;
+        font-size: 12px;
+        line-height: 16px;
       }
 
       &:hover {

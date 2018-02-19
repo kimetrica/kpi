@@ -44,6 +44,7 @@ import {
 
 import Reports from './components/reports';
 import FormLanding from './components/formLanding';
+import FormSummary from './components/formSummary';
 import FormSubScreens from './components/formSubScreens';
 import FormViewTabs from './components/formViewTabs';
 import Modal from './components/modal';
@@ -52,7 +53,6 @@ import {ChangePassword, AccountSettings} from './components/accountSettings';
 import {
   getAnonymousUserPermission,
   anonUsername,
-  parsePermissions,
   log,
   t,
   assign,
@@ -62,10 +62,6 @@ import {
 
 import hotkey from 'react-hotkey';
 hotkey.activate();
-
-var assetStore = stores.asset;
-var sessionStore = stores.session;
-
 
 function stringifyRoutes(contextRouter) {
   return JSON.stringify(contextRouter.getCurrentRoutes().map(function(r){
@@ -274,6 +270,10 @@ export var routes = (
         <Route path="json" component={FormJson} />
         <Route path="xform" component={FormXform} />
         <Route path="edit" component={FormPage} />
+
+        <Route path="summary">
+          <IndexRoute component={FormSummary} />
+        </Route>
 
         <Route path="landing">
           <IndexRoute component={FormLanding} />

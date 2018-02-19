@@ -421,7 +421,9 @@ class ExportTask(ImportExportTask):
             # Unsure if DRF exceptions make sense here since we're not
             # returning a HTTP response
             raise exceptions.PermissionDenied(
-                'user cannot export this %s' % source._meta.model_name)
+                u'{user} cannot export {source}'.format(
+                    user=self.user, source=source)
+            )
         if not source.has_deployment:
             raise Exception('the source must be deployed prior to export')
         export_type = self.data.get('type', '').lower()
@@ -465,12 +467,18 @@ class ExportTask(ImportExportTask):
                         prefix='export_xlsx', mode='rb'
                 ) as xlsx_output_file:
                     export.to_xlsx(xlsx_output_file.name, submission_stream)
+                    # TODO: chunk again once
+                    # https://github.com/jschneier/django-storages/issues/449
+                    # is fixed
+                    '''
                     while True:
                         chunk = xlsx_output_file.read(5 * 1024 * 1024)
                         if chunk:
                             output_file.write(chunk)
                         else:
                             break
+                    '''
+                    output_file.write(xlsx_output_file.read())
 
         # Restore the FileField to its typical state
         self.result.open('rb')

@@ -27,6 +27,11 @@ export function formatTimeDate(timeStr) {
   return _m.format('LLL');
 }
 
+export function formatDate(timeStr) {
+  var _m = moment(timeStr);
+  return _m.format('ll');
+}
+
 export var anonUsername = 'AnonymousUser';
 export function getAnonymousUserPermission(permissions) {
   return permissions.filter(function(perm){
@@ -71,7 +76,7 @@ export function parsePermissions(owner, permissions) {
     return {
       username: username,
       can: perms[username].reduce((cans, perm)=> {
-        var permCode = perm.permission.split('_')[0];
+        var permCode = perm.permission.includes('_submissions') ? perm.permission : perm.permission.split('_')[0];
         cans[permCode] = perm;
         return cans;
       }, {})
@@ -115,7 +120,7 @@ export function t(str) {
 // these values may appear in transifex (esp. email) and need to
 // be replaced in all the translations before removing this hard
 // coded value.
-const originalSupportEmail = 'support@kobotoolbox.org';
+const originalSupportEmail = 'help@kobotoolbox.org';
 const originalSupportUrl = 'http://help.kobotoolbox.org';
 
 let supportDetails = {
@@ -163,8 +168,8 @@ export function isLibrary(router) {
 }
 
 export function stringToColor(str, prc) {
-  // Check for lightness/darkness
-  var prc = typeof prc === 'number' ? prc : 5;
+  // Higher prc = lighter color, lower = darker
+  var prc = typeof prc === 'number' ? prc : -15;
   var hash = function(word) {
       var h = 0;
       for (var i = 0; i < word.length; i++) {
