@@ -44,9 +44,11 @@
   padding: 10px 24px;
   border-left: 5px solid $cool-green;
   border-bottom: 1px solid #CCC;
+  position: relative;
 
   h2 {
     margin: 0px;
+    margin-right: 60px;
     color: $cool-green;
     font-size: 16px;
     font-weight: normal;
@@ -56,10 +58,18 @@
   .report-view__headingMeta {
     opacity: 0.6;
     font-size: 11px;
+    margin-right: 60px;
 
     .type {
       text-transform: uppercase;
     }
+  }
+
+  .report-button__question-settings {
+    overflow: visible;
+    position: absolute;
+    right: 15px;
+    top: 6px;
   }
 }
 
@@ -134,7 +144,13 @@
       margin-left: 8px;
     }
 
-    &.report-button__expand, &.report-button__print {
+    &.report-button__edit,
+    &.report-button__settings {
+      overflow: visible;
+    }
+
+    &.report-button__expand,
+    &.report-button__print {
       float: right;
       margin-right: 0px;
       margin-left: 8px;
@@ -181,6 +197,13 @@
     content: '';
     clear: both;
     display: block;
+  }
+
+  strong {
+    margin-bottom: 20px;
+    display: block;
+    font-weight: 400;
+    color: $cool-gray;
   }
 }
 
@@ -260,14 +283,12 @@
       }
     }
   }
-}
 
-.graph-tab__size {
-  padding: 20px;
-
-  .slider-item {
+  + .slider-item {
     padding: 10px;
     display: flex;
+    width: 240px;
+    margin: 0 auto;
 
     > label {
       width: 100px;
@@ -279,8 +300,57 @@
   }
 }
 
+.graph-tab__groupby,
+.graph-tab__translation {
+  padding: 20px 30px;
+
+  > label {
+    display: block;
+    padding: 8px 0px;
+    padding-left: 30px;
+    position: relative;
+    font-size: 14px;
+
+    input {
+      position: absolute;
+      left: 0px;
+    }
+  }
+}
+
+.custom-report--title {
+  padding-bottom: 30px;
+
+  input {
+    width: 100%;
+    font-size: 20px;
+    font-weight: 300;
+  }
+}
+
+.custom-report--questions {
+  height: 300px;
+  margin: 10px 0px;
+  overflow: auto;
+  width: 100%;
+
+  .graph-settings__question {
+    width: 100%;
+    padding: 5px 10px;
+
+    input[type="checkbox"] + label {
+      display: inline-block;
+    }
+  }
+}
+
+.custom-report--footer {
+  margin: 15px 0px;
+  text-align: right;
+}
+
 @media screen and (max-width: 767px) {
-  .form-view__reportButtons button.graph-settings {
+  .form-view__reportButtons button.custom-reports {
     margin-left: 8px;
   }
 

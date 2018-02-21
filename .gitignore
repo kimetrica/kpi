@@ -23,3 +23,6 @@ sensitive_data.json
 test/compiled/*
 docker/run_django.sh
 log
+.idea/
+celerybeat-schedule
+deployments.json

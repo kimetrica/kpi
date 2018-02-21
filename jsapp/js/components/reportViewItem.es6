@@ -82,7 +82,42 @@ class ReportTable extends React.Component {
 class ReportViewItem extends React.Component {
   constructor(props) {
     super(props);
-    var d = this.props.data, reportTable = [];
+    this.state = {
+      reportTable: false
+    };
+    this.itemChart = false;
+    autoBind(this);
+  }
+  componentDidMount () {
+    this.prepareTable(this.props.data);
+    if (this.props.data.show_graph) {
+      this.loadChart();
+    }
+  }
+  componentWillReceiveProps(nextProps) {
+    if (this.props.data != nextProps.data) {
+      this.prepareTable(nextProps.data);
+    }
+  }
+  componentDidUpdate (prevProps) {
+    // refreshes a chart right after render()
+    // TODO: ideally this shouldn't refresh a chart if it hasn't changed
+    if (this.props.data.show_graph) {
+      this.loadChart();
+    }
+  }
+  loadChart() {
+    var canvas = ReactDOM.findDOMNode(this.refs.canvas);
+    var opts = this.buildChartOptions();
+    if (this.itemChart) {
+      this.itemChart.destroy();
+      this.itemChart = new Chart(canvas, opts);
+    } else {
+      this.itemChart = new Chart(canvas, opts);
+    }
+  }
+  prepareTable(d) {
+    var reportTable = [];
     if (d.percentages && d.responses && d.frequencies) {
       reportTable = _.zip(
           d.responses,
@@ -94,44 +129,12 @@ class ReportViewItem extends React.Component {
     if (d.mean)
       reportTable = false;
 
-    this.state = {
-      ...this.props,
-      reportTable: reportTable
-    };
-    autoBind(this);
-  }
-  componentDidMount () {
-    if (!this.refs.canvas) {
-      return;
-    }
-    if (this.state.data.show_graph) {
-      var opts = this.buildChartOptions();
-
-      var canvas = ReactDOM.findDOMNode(this.refs.canvas);
-      var itemChart = new Chart(canvas, opts);
-      this.setState({itemChart: itemChart});
-    }
-  }
-  componentWillUpdate (newProps) {
-    if (this.state.style != newProps.style) {
-      this.setState({style: newProps.style});
-    }
-    if (this.state.data != newProps.data) {
-      this.setState({data: newProps.data});
-    }
-    if (this.state.data.show_graph) {
-      var canvas = ReactDOM.findDOMNode(this.refs.canvas);
-      var opts = this.buildChartOptions();
-      let itemChart = this.state.itemChart;
-      if (itemChart !== undefined) {
-        itemChart.destroy();
-        itemChart = new Chart(canvas, opts);
-      }
-    }
+    this.setState({reportTable: reportTable});
   }
   buildChartOptions () {
-    var data = this.state.data;
-    var chartType = this.state.style.report_type || 'bar';
+    var data = this.props.data;
+    var chartType = this.props.style.report_type || 'bar';
+
     var maxPercentage = 100;
     var barPercentage = 0.5;
     var showLegend = false;
@@ -201,8 +204,7 @@ class ReportViewItem extends React.Component {
           datasets: datasets
       },
       options: {
-        responsive: true,
-        events: [''],
+        // events: [''],
         legend: {
           display: showLegend
         },
@@ -242,19 +244,19 @@ class ReportViewItem extends React.Component {
       opts.options.scales.xAxes = [];
       opts.options.scales.yAxes = [];
 
-      if (this.state.style.report_type === 'donut') {
+      if (this.props.style.report_type === 'donut') {
         opts.options.cutoutPercentage = 50;
       }
     }
 
-    if (this.state.style.report_type === 'area') {
+    if (this.props.style.report_type === 'area') {
       opts.data.datasets[0].backgroundColor = colors[0];
     }
 
     return opts;
   }
   buildChartColors () {
-    var colors = this.state.style.report_colors || [
+    var colors = this.props.style.report_colors || [
       'rgba(52, 106, 200, 0.8)',
       'rgba(252, 74, 124, 0.8)',
       'rgba(250, 213, 99, 0.8)',
@@ -280,13 +282,14 @@ class ReportViewItem extends React.Component {
     return colors;
   }
   render () {
-    let p = this.state,
+    let p = this.props,
       d = p.data,
       r = p.row,
-      _type = r.type;
+      _type = r.type,
+      name = p.name;
 
     if (!_type) {
-      console.error('No type given for row: ', this.state);
+      console.error('No type given for row: ', this.props);
       return <p className='error'>{'Error displaying row: '}<code>{p.kuid}</code></p>;
     }
     if (_type.select_one || _type.select_multiple) {
@@ -298,6 +301,7 @@ class ReportViewItem extends React.Component {
     if (this.props.translations) {
       questionLabel = r.label[this.props.translationIndex];
     }
+
     return (
       <div>
         <bem.ReportView__itemHeading>
@@ -323,19 +327,27 @@ class ReportViewItem extends React.Component {
               }
             </span>
           </bem.ReportView__headingMeta>
+          {d.show_graph && 
+            <button className="mdl-button mdl-button--icon report-button__question-settings"
+                  onClick={this.props.triggerQuestionSettings}
+                  data-question={name}
+                  data-tip={t('Override Graph Style')}>
+              <i className="k-icon-more" data-question={name} />
+            </button>
+          }
         </bem.ReportView__itemHeading>
         <bem.ReportView__itemContent>
           {d.show_graph && 
             <bem.ReportView__chart
-                style={{width: this.state.style.graphWidth + 'px'}}>
+                style={{width: this.props.style.graphWidth + 'px'}}>
               <canvas ref="canvas" />
             </bem.ReportView__chart>
           }
           {d.values &&
             <ReportTable rows={d.values} type='disaggregated' />
           }
-          {p.reportTable &&
-            <ReportTable rows={p.reportTable} type='regular'/>
+          {this.state.reportTable &&
+            <ReportTable rows={this.state.reportTable} type='regular'/>
           }
           {d.mean &&
             <ReportTable rows={d} type='numerical'/>
