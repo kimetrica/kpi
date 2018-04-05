@@ -7,7 +7,7 @@ import actions from '../actions';
 import reactMixin from 'react-mixin';
 import mixins from '../mixins';
 import bem from '../bem';
-import {t, notify, isAValidUrl} from '../utils';
+import {t, notify} from '../utils';
 import stores from '../stores';
 import ui from '../ui';
 import alertify from 'alertifyjs';
@@ -29,7 +29,9 @@ class Submission extends React.Component {
       enketoEditLink: false,
       previous: -1, 
       next: -1,
-      sid: props.sid
+      sid: props.sid,
+      showBetaFieldsWarning: false,
+      promptRefresh: false
     };
     autoBind(this);
   }
@@ -47,29 +49,34 @@ class Submission extends React.Component {
 
   getSubmission(assetUid, sid) {
     dataInterface.getSubmission(assetUid, sid).done((data) => {
-      this.setState({
-        submission: data,
-        loading: false
-      });
-      dataInterface.getEnketoEditLink(assetUid, sid).done((data) => {
-        if (data.url)
-          this.setState({enketoEditLink: data.url});
-      });
+      var prev = -1, next = -1;
+
+      if (this.props.asset.deployment__active) {
+        dataInterface.getEnketoEditLink(assetUid, sid).done((editData) => {
+          if (editData.url)
+            this.setState({enketoEditLink: editData.url});
+        });
+      }
 
       if (this.props.ids && sid) {
         const c = this.props.ids.findIndex(k => k==sid);
-
         if (c > 0)
-          this.setState({previous: this.props.ids[c - 1]});
-        else
-          this.setState({previous: -1});
-
+          prev = this.props.ids[c - 1];
         if (c < this.props.ids.length)
-          this.setState({next: this.props.ids[c + 1]});
-        else
-          this.setState({next: -1});
+          next = this.props.ids[c + 1];
       }
 
+      const survey = this.props.asset.content.survey;
+      const betaQuestions = ['begin_kobomatrix'];
+      const hasBetaQuestion = survey.find(q => betaQuestions.includes(q.type)) || false;
+
+      this.setState({
+        submission: data,
+        loading: false,
+        next: next,
+        previous: prev,
+        hasBetaQuestion: hasBetaQuestion
+      });
     }).fail((error)=>{
       if (error.responseText)
         this.setState({error: error.responseText, loading: false});
@@ -82,7 +89,8 @@ class Submission extends React.Component {
 
   componentWillReceiveProps(nextProps) {
     this.setState({
-      sid: nextProps.sid
+      sid: nextProps.sid,
+      promptRefresh: false
     });
 
     this.getSubmission(nextProps.asset.uid, nextProps.sid);
@@ -108,34 +116,42 @@ class Submission extends React.Component {
   }
 
   renderAttachment(filename, type) {
-    const s = this.state.submission;
-    var download_url = null;
+    const s = this.state.submission, originalFilename = filename;
+    var attachmentUrl = null;
 
-    s._attachments.forEach(function(a) {
-      if (a.download_url.includes(encodeURI(filename))) {
-        download_url = a.download_url;
+    // Match filename with full filename in attachment list
+    // TODO: find a better way to do this, this works but seems inefficient
+    s._attachments.some(function(a) {
+      if (a.filename.includes(filename)) {
+        filename = a.filename;
       }
     });
 
     var kc_server = document.createElement('a');
     kc_server.href = this.props.asset.deployment__identifier;
-    var kobocollect_url = kc_server.origin;
-    if (type === 'image') {
-      if (download_url && isAValidUrl(download_url))
-        return <img src={download_url} />
-      else if (download_url)
-        return <img src={`${kobocollect_url}/${download_url}`} />
-      else
-        return filename;
-    } else {
-      if (download_url && isAValidUrl(download_url))
-        return <a href={download_url}>{filename}</a>
-      else if (download_url)
-        return <a href={download_url}>{filename}</a>
-      else
-        return filename;
+    var kc_base = kc_server.origin;
 
+    // build media attachment URL using the KC endpoint
+    attachmentUrl = `${kc_base}/attachment/original?media_file=${encodeURI(filename)}`;
+
+    if (type === 'image') {
+      return <img src={attachmentUrl} />
+    } else {
+      return <a href={attachmentUrl} target="_blank">{originalFilename}</a>
     }
+  }
+
+  promptRefresh() {
+    this.setState({
+      promptRefresh: true
+    });
+  }
+
+  triggerRefresh() {
+    this.getSubmission(this.props.asset.uid, this.props.sid);
+    this.setState({
+      promptRefresh: false
+    });    
   }
 
   switchSubmission(evt) {
@@ -151,6 +167,140 @@ class Submission extends React.Component {
   validationStatusChange(e) {
     const data = {"validation_status.uid": e.value};
     actions.resources.updateSubmissionValidationStatus(this.props.asset.uid, this.state.sid, data);
+  }
+
+  responseDisplayHelper(q, s, overrideValue = false, name) {
+    if (!q) return false;
+    const choices = this.props.asset.content.choices;
+
+    var submissionValue = s[name];
+
+    if (overrideValue)
+      submissionValue = overrideValue;
+
+    switch(q.type) {
+      case 'select_one':
+        const choice = choices.find(x => x.list_name == q.select_from_list_name && x.name === submissionValue);
+        if (choice && choice.label && choice.label[0])
+          return choice.label[0];
+        break;
+      case 'select_multiple':
+        var responses = submissionValue.split(' ');
+        var list = responses.map((r)=> {
+          const choice = choices.find(x => x.list_name == q.select_from_list_name && x.name === r);
+          if (choice && choice.label && choice.label[0])
+            return <li key={r}>{choice.label[0]}</li>;
+        })
+        return <ul>{list}</ul>;
+        break;
+      case 'image':
+      case 'audio':
+      case 'video':
+        return this.renderAttachment(submissionValue, q.type);
+        break;
+      default:
+        return submissionValue;
+        break;
+    }
+  }
+  renderRows() {
+    const s = this.state.submission,
+          survey = this.props.asset.content.survey,
+          _this = this;
+    var parentGroup = false;
+    const groupTypes = ['begin_score', 'begin_rank', 'begin_group'];
+    const groupTypesEnd = ['end_score', 'end_rank', 'end_group'];
+
+    return survey.map((q)=> {
+      var name = q.name || q.$autoname || q.$kuid;
+      if (q.type === 'begin_repeat') { 
+        return (
+          <tr key={`row-${name}`}>
+            <td colSpan="3" className="submission--repeat-group">
+              <h4>
+                {t('Repeat group: ')}
+                {q.label && q.label[0] ? q.label[0] : t('Unlabelled')}
+              </h4>
+              {s[name] && s[name].map((repQ, i)=> {
+                var response = [];
+                for (var pN in repQ) {
+                  var qName = pN.split('/').pop(-1);
+                  const subQ = survey.find(x => x.name == qName || x.$autoname == qName);
+
+                  const icon = icons._byId[subQ.type];
+                  var type = q.type;
+                  if (icon)
+                    type = <i className={`fa fa-${icon.attributes.faClass}`} title={q.type}/>
+
+                  response.push(
+                    <tr key={`row-${pN}`}>
+                      <td className="submission--question-type">{type}</td>
+                      <td className="submission--question">
+                        {subQ.label && subQ.label[0]}
+                      </td>
+                      <td className="submission--response">
+                        {_this.responseDisplayHelper(subQ, s, repQ[pN], pN)}
+                      </td>
+                    </tr>      
+                  );
+                }
+                return (
+                  <table key={`repeat-${i}`}>
+                    <tbody>
+                      {response}
+                    </tbody>
+                  </table>
+                );
+              })}
+            </td>
+          </tr>
+        );
+      }
+
+      if (q.type === 'end_repeat')
+        return false;
+
+      if (groupTypes.includes(q.type)) {
+        parentGroup = name;
+        return (
+          <tr key={`row-${name}`}>
+            <td colSpan="3" className="submission--group">
+              <h4>
+                {q.label && q.label[0] ? q.label[0] : t('Unlabelled')}
+              </h4>
+            </td>
+          </tr>
+        );
+      }
+
+      if (groupTypesEnd.includes(q.type)) {
+        parentGroup = false;
+        return (
+          <tr key={`row-${name}-end`}>
+            <td colSpan="3" className="submission--end-group"></td>
+          </tr>
+        );
+      }
+
+      if (parentGroup)
+        name = `${parentGroup}/${name}`;
+
+      if (q.label == undefined || s[name] == undefined) { return false;}
+
+      const response = this.responseDisplayHelper(q, s, false, name);
+      const icon = icons._byId[q.type];
+      var type = q.type;
+      if (icon)
+        type = <i className={`fa fa-${icon.attributes.faClass}`} title={q.type}/>
+
+      return (
+        <tr key={`row-${name}`}>
+          <td className="submission--question-type">{type}</td>
+          <td className="submission--question">{q.label[0] || t('Unlabelled')}</td>
+          <td className="submission--response">{response}</td>
+        </tr>      
+      );
+    });
   }
   render () {
     if (this.state.loading) {
@@ -177,21 +327,36 @@ class Submission extends React.Component {
     }
 
     const s = this.state.submission;
-    const survey = this.props.asset.content.survey;
-    const choices = this.props.asset.content.choices;
-
     return (
       <bem.FormModal>
-        <bem.FormModal__group m='validation-status'>
-          <label>{t('Validation status')}</label>
-          <Select 
-            disabled={!this.userCan('validate_submissions', this.props.asset)}
-            clearable={false}
-            value={s._validation_status ? s._validation_status.uid : ''}
-            options={VALIDATION_STATUSES}
-            onChange={this.validationStatusChange}>
-          </Select>
-        </bem.FormModal__group>
+        {this.state.hasBetaQuestion &&
+          <div className='submission--warning'>
+            <i className="k-icon-alert" />
+            <span>{t('Responses from a Question Matrix are not displayed in this screen.')}</span>
+          </div>
+        }
+
+        {this.state.promptRefresh &&
+          <div className='submission--warning'>
+            <p>{t('Click on the button below to load the most recent data for this submission. ')}</p>
+            <a onClick={this.triggerRefresh} className="mdl-button mdl-button--raised mdl-button--colored">
+              {t('Refresh submission')}
+            </a>
+          </div>
+        }
+
+        {this.props.asset.deployment__active &&
+          <bem.FormModal__group m='validation-status'>
+            <label>{t('Validation status')}</label>
+            <Select 
+              disabled={!this.userCan('validate_submissions', this.props.asset)}
+              clearable={false}
+              value={s._validation_status ? s._validation_status.uid : ''}
+              options={VALIDATION_STATUSES}
+              onChange={this.validationStatusChange}>
+            </Select>
+          </bem.FormModal__group>
+        }
         <bem.FormModal__group>
           <div className="submission-pager">
             {this.state.previous > -1 &&
@@ -216,6 +381,7 @@ class Submission extends React.Component {
           <div className="submission-actions">
             {this.userCan('change_submissions', this.props.asset) && this.state.enketoEditLink &&
               <a href={this.state.enketoEditLink}
+                   onClick={this.promptRefresh}
                  target="_blank"
                  className="mdl-button mdl-button--raised mdl-button--colored">
                 {t('Edit')}
@@ -230,7 +396,6 @@ class Submission extends React.Component {
             }
           </div>
         </bem.FormModal__group>
-
         <table>
           <thead>
           <tr>
@@ -240,6 +405,11 @@ class Submission extends React.Component {
           </tr>
           </thead>
           <tbody>
+            {this.renderRows()}
+            <tr key={`row-meta`}>
+              <td colSpan="3" className="submission--end-group"></td>
+            </tr>
+
             {s.start &&
               <tr>
                 <td></td>
@@ -254,46 +424,6 @@ class Submission extends React.Component {
                 <td>{s.end}</td>
               </tr>
             }
-            {survey.map((q)=> {
-              const name = q.name || q.$autoname;
-              if (q.label == undefined) { return false;}
-              var response = s[name];
-
-              if (q.type=="select_one" && s[name]) {
-                const choice = choices.find(x => x.list_name == q.select_from_list_name && x.name === s[name]);
-                if (choice && choice.label)
-                  response = choice.label[0];
-              }
-
-              if (q.type === 'select_multiple' && s[name]) {
-                var responses = s[name].split(' ');
-                var list = responses.map((r)=> {
-                  const choice = choices.find(x => x.list_name == q.select_from_list_name && x.name === r);
-                  if (choice && choice.label)
-                    return <li key={r}>{choice.label[0]}</li>;
-                })
-                response = <ul>{list}</ul>;
-              }
-
-              if (s[name] && (q.type === 'image' || q.type === 'audio' || q.type === 'video')) {
-                response = this.renderAttachment(s[name], q.type);
-              }
-
-              var icon = icons._byId[q.type];
-              var type = q.type;
-              if (icon) {
-                type = <i className={`fa fa-${icon.attributes.faClass}`}
-                          title={q.type}/>
-              }
-
-              return (
-                <tr key={`row-${name}`}>
-                  <td className="submission--question-type">{type}</td>
-                  <td className="submission--question">{q.label[0]}</td>
-                  <td className="submission--response">{response}</td>
-                </tr>      
-              );
-            })}
             {s.__version__ &&
               <tr>
                 <td></td>
@@ -311,7 +441,6 @@ class Submission extends React.Component {
 
           </tbody>
         </table>
-
       </bem.FormModal>
     );
   }

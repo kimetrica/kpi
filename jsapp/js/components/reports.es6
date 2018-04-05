@@ -272,7 +272,7 @@ class CustomReportForm extends React.Component {
               data-name={q.name}
               id={'q-' + q.name} />
             <label htmlFor={'q-' + q.name}>
-              {q.row.label[0]}
+              {q.row.label ? q.row.label[0] : t('Unlabeled') }
             </label>
         </div>
       );
@@ -910,6 +910,10 @@ class Reports extends React.Component {
     this.setState({currentCustomReport: false});
   }
   toggleExpandedReports () {
+    if (this.state.showExpandedReport) {
+      // load asset again to restore header title and submission count after exiting expanded report
+      actions.resources.loadAsset({id: this.props.params.assetid});
+    }
     stores.pageState.hideDrawerAndHeader(!this.state.showExpandedReport);
     this.setState({
       showExpandedReport: !this.state.showExpandedReport,

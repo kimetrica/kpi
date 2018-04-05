@@ -272,6 +272,12 @@ var dataInterface;
         }
       });
     },
+    deleteAssetExport (euid) {
+      return $ajax({
+        url: `${rootUrl}/exports/${euid}/`,
+        method: 'DELETE'
+      });
+    },
     getAssetXformView (uid) {
       return $ajax({
         url: `${rootUrl}/assets/${uid}/xform`,
@@ -422,7 +428,7 @@ var dataInterface;
     },
     getEnketoEditLink(uid, sid) {
       return $ajax({
-        url: `${rootUrl}/assets/${uid}/submissions/${sid}/edit?return_url=url`,
+        url: `${rootUrl}/assets/${uid}/submissions/${sid}/edit?return_url=false`,
         method: 'GET'
       });
     },

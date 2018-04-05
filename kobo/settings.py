@@ -107,6 +107,12 @@ MIDDLEWARE_CLASSES = (
     'hub.middleware.OtherFormBuilderRedirectMiddleware',
 )
 
+# Warn developers to use `pytest` instead of `./manage.py test`
+class DoNotUseRunner(object):
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError('Please run tests with `pytest` instead')
+TEST_RUNNER = __name__ + '.DoNotUseRunner'
+
 # used in kpi.models.sitewide_messages
 MARKITUP_FILTER = ('markdown.markdown', {'safe_mode': False})
 
@@ -252,9 +258,9 @@ TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
 #if not DEBUG:
 #    STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
 
-TRACKJS_TOKEN = os.environ.get('TRACKJS_TOKEN')
 GOOGLE_ANALYTICS_TOKEN = os.environ.get('GOOGLE_ANALYTICS_TOKEN')
 INTERCOM_APP_ID = os.environ.get('INTERCOM_APP_ID')
+RAVEN_JS_DSN = os.environ.get('RAVEN_JS_DSN')
 
 # replace this with the pointer to the kobocat server, if it exists
 KOBOCAT_URL = os.environ.get('KOBOCAT_URL', 'http://kobocat/')

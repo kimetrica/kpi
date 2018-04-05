@@ -25,7 +25,6 @@ import {
   t,
   redirectTo,
   assign,
-  notify,
   formatTime
 } from '../utils';
 
@@ -218,6 +217,10 @@ export class ProjectDownloads extends React.Component {
       lang: '_default',
       hierInLabels: false,
       groupSep: '/',
+      // If there's only one version, the resulting file will be the same
+      // regardless of whether this is true or false, but we'll use this to
+      // report if the export was "multi-versioned" later
+      fieldsFromAllVersions: this.props.asset.deployed_versions.count > 1,
       exports: false,
       formSubmitDisabled: false
     };
@@ -239,6 +242,7 @@ export class ProjectDownloads extends React.Component {
   }
   typeChange (e) {this.handleChange(e, 'type');}
   langChange (e) {this.handleChange(e, 'lang');}
+  fieldFromAllVersionsChange (e) {this.handleChange(e, 'fieldsFromAllVersions');}
   hierInLabelsChange (e) {this.handleChange(e, 'hierInLabels');}
   groupSepChange (e) {this.handleChange(e, 'groupSep');}
   handleSubmit (e) {
@@ -264,6 +268,7 @@ export class ProjectDownloads extends React.Component {
           lang: this.state.lang,
           hierarchy_in_labels: this.state.hierInLabels,
           group_sep: this.state.groupSep,
+          fields_from_all_versions: this.state.fieldsFromAllVersions
         };
         $.ajax({
           method: 'POST',
@@ -353,8 +358,31 @@ export class ProjectDownloads extends React.Component {
     });
   }
 
+  deleteExport(evt) {
+    let el = $(evt.target).closest('[data-euid]').get(0);
+    let euid = el.getAttribute('data-euid');
+
+    let dialog = alertify.dialog('confirm');
+    let opts = {
+      title: t('Delete export?'),
+      message: t('Are you sure you want to delete this export? This action is not reversible.'),
+      labels: {ok: t('Delete'), cancel: t('Cancel')},
+      onok: () => {
+        dataInterface.deleteAssetExport(euid).then(()=> {
+          this.getExports();
+        }).fail((jqxhr)=> {
+          alertify.error(t('Failed to delete export.'));
+        });
+      },
+      oncancel: () => {dialog.destroy()}
+    };
+    dialog.set(opts).show();
+
+  }
+
   render () {
     let translations = this.props.asset.content.translations;
+    let dvcount = this.props.asset.deployed_versions.count;
     var docTitle = this.props.asset.name || t('Untitled');
     return (
       <DocumentTitle title={`${docTitle} | KoboToolbox`}>
@@ -415,6 +443,17 @@ export class ProjectDownloads extends React.Component {
                             onChange={this.groupSepChange}
                           />
                         </bem.FormModal__item>
+                      : null,
+                      dvcount > 1 ?
+                        <bem.FormModal__item key={'v'} m='export-fields-from-all-versions'>
+                          <input type="checkbox" id="fields_from_all_versions"
+                            checked={this.state.fieldsFromAllVersions}
+                            onChange={this.fieldFromAllVersionsChange}
+                          />
+                          <label htmlFor="fields_from_all_versions">
+                            {t('Include fields from all ___ deployed versions').replace('___', dvcount)}
+                          </label>
+                        </bem.FormModal__item>
                       : null
                     ] : null
                   , this.state.type.indexOf('_legacy') > 0 ?
@@ -436,7 +475,7 @@ export class ProjectDownloads extends React.Component {
                 </bem.FormModal__form>
               </bem.FormView__cell>
           </bem.FormView__row>
-          {this.state.exports && 
+          {this.state.exports && !this.state.type.endsWith('_legacy') &&
             <bem.FormView__row>
                 <bem.FormView__cell m='label'>
                   {t('Exports')}
@@ -447,6 +486,7 @@ export class ProjectDownloads extends React.Component {
                     <bem.FormView__label m='date'>{t('Created')}</bem.FormView__label>
                     <bem.FormView__label m='lang'>{t('Language')}</bem.FormView__label>
                     <bem.FormView__label m='include-groups'>{t('Include Groups')}</bem.FormView__label>
+                    <bem.FormView__label m='multi-versioned'>{t('Multiple Versions')}</bem.FormView__label>
                     <bem.FormView__label></bem.FormView__label>
                   </bem.FormView__group>
                   {this.state.exports.map((item, n) => {
@@ -466,6 +506,13 @@ export class ProjectDownloads extends React.Component {
                         <bem.FormView__label m='include-groups'>
                           {item.data.hierarchy_in_labels === "false" ? t('No') : t("Yes")}
                         </bem.FormView__label>
+                        <bem.FormView__label m='multi-versioned'>
+                          {
+                            // Old exports won't have this field, and we should
+                            // assume they *were* multi-versioned
+                            item.data.fields_from_all_versions === "false" ? t('No') : t('Yes')
+                          }
+                        </bem.FormView__label>
                         <bem.FormView__label m='action'>
                           {item.status == 'complete' &&
                             <a className="form-view__link form-view__link--export-download" 
@@ -481,6 +528,10 @@ export class ProjectDownloads extends React.Component {
                           {item.status != 'error' && item.status != 'complete' &&
                             <span className="animate-processing">{t('processing...')}</span>
                           }
+                          <a className="form-view__link form-view__link--export-delete"
+                             onClick={this.deleteExport} data-euid={item.uid} data-tip={t('Delete')}>
+                            <i className="k-icon-trash" />
+                          </a>
 
                         </bem.FormView__label>
                       </bem.FormView__group>
