@@ -6,7 +6,7 @@
 #
 -e git+https://github.com/dimagi/django-digest@0eb1c921329dd187c343b61acfbec4e98450136e#egg=django_digest
 -e git+https://github.com/kobotoolbox/formpack.git@e7428a0af798c006b38fe54ac804840c96b1ecd0#egg=formpack
--e git+https://github.com/kimetrica/pyxform.git@bdm#egg=pyxform-dev
+-e git+https://github.com/kimetrica/pyxform.git@bdm#egg=pyxform
 amqp==1.4.9
 anyjson==0.3.3
 begins==0.9
